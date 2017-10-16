@@ -1,6 +1,6 @@
 # IMPS_CPP_tools
 C++ Implementations of IMPS algorithms with **abelian** symmetries, for calculating ground states 
-and elementary excitations for infinite one-dimensional quantum lattices.
+and elementary excitations for infinite one-dimensional quantum lattices. For now, only a certain collection of popular models with nearest neighbor interactions are implemented and supported. The possibility to define general user-defined models and MPO implementations are features to come.
 
 ## Prerequisites
 - armadillo library for fast matrix wrappers and linear algebra http://arma.sourceforge.net/
