@@ -1,0 +1,9 @@
+*.[oa]
+*.bin
+bin
+obj
+data
+states
+log*
+build*
+
