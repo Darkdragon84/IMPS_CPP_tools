@@ -44,7 +44,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -parallel -march=native -g")
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(USE_NM_REP ON CACHE BOOL "Use NM Representation for Hubbard")
 set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build Type")
-set(ARMADILLO_INCLUDE /home/valentin/libs/armadillo/include CACHE FILEPATH "Path to Armadillo Include")
+set(ARMADILLO_INCLUDE $ENV{HOME}/libs/armadillo/include CACHE FILEPATH "Path to Armadillo Include")
 include_directories(include)
 include_directories(${ARMADILLO_INCLUDE})
 
