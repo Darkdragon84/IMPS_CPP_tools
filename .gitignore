@@ -1,5 +1,6 @@
 *.[oa]
 *.bin
+*.so
 bin
 obj
 data
