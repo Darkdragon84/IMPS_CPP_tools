@@ -216,9 +216,6 @@ int eigs_n(std::function<void (double*,double*)> MultOPx, int N, CVecType& vals,
     RVecType WORKD(3*N);
     RVecType WORKL(LWORKL);
 
-//    int CNT = 0;
-//    int MAXOPX = MAXIT;
-
     /// DNAUPD -------------------------------------------------------------------------------------------------------------------------//
     while (IDO!=99)
     {
@@ -232,9 +229,6 @@ int eigs_n(std::function<void (double*,double*)> MultOPx, int N, CVecType& vals,
         case 1: /// compute Z = B * X and Y = OP * Z
             /// For Simple EV Problem Y = Z
             MultOPx(&WORKD[IPNTR[0]-1],&WORKD[IPNTR[1]-1]);
-//            ++CNT;
-//            if (CNT<MAXOPX) MultOPx(&WORKD[IPNTR[0]-1],&WORKD[IPNTR[1]-1]);
-//            else std::fill(&WORKD[IPNTR[1]-1],&WORKD[IPNTR[1]-1]+N,0.);
             break;
         case 2:
             cerr<<"2 not implemented"<<endl;
@@ -257,7 +251,6 @@ int eigs_n(std::function<void (double*,double*)> MultOPx, int N, CVecType& vals,
     if (IDO==99 && INFONAUP==0)
     {
         nconv=IPARAM[4];
-        cout<< "Number of OP*x: "<<IPARAM[8]<<", where MAXIT = "<<MAXIT<<endl;
     }
     else
     {
@@ -338,7 +331,6 @@ int eigs_n(const RMatType& A, CVecType& vals, CMatType& vecs,  int nev, std::str
         outvec = A*invec;
     };
 
-//    return eigs_rn(MultAx,m,vals,vecs,nev,whch,tol,x0,maxit,ncv);
     return eigs_n(MultAx,m,vals,vecs,nev,whch,tol,x0,maxit,ncv);
 }
 
@@ -415,7 +407,6 @@ int eigs_rs(std::function<void (double*,double*)> MultOPx, int N, RVecType& vals
     if (IDO==99 && INFONAUP==0)
     {
         nconv=IPARAM[4];
-//        cout<<nconv<<" converged after "<<IPARAM[2]<<" iters ("<<IPARAM[8]<<" nopx)"<<endl;
     }
     else
     {
@@ -451,7 +442,6 @@ int eigs_rs(std::function<void (double*,double*)> MultOPx, int N, RVecType& vals
             vals.resize(newsize);
             if (RVEC==1) vecs.resize(N,newsize);
         }
-//        else vals=sort(vals,1);
     }
     else
     {
