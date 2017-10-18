@@ -3,6 +3,7 @@
 *.so
 bin
 obj
+lib
 data
 states
 log*
