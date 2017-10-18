@@ -654,7 +654,7 @@ MPSBlockMat<KT,VT>::GetSingleSecData(dirtype dir) const
                 /// for current right QN, collect all contributing elements, their sizes and right QNs (spans in dense matrix rep will be determined later, for now put empty span)
                 sec.mr_tot = QMat(*iter).n_cols;
                 /// store pair of contrib. phys. index and iterator to the corresponding block
-                sec.v_phys_ind.emplace_back(s,iter); /// C++11: use emplace_back instead of push_back
+                sec.v_phys_ind.emplace_back(s,iter);
                 /// store for each contrib. phys. index the left size and (a pointer to) the actual ingoing QN.
                 sec.sizes_spans.emplace(s,make_tuple(QMat(*iter).n_rows,span(),&Qin(*iter)));
             }
