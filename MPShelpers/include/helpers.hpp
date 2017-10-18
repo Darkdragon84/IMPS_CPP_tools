@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <iomanip>
 #include <assert.h>
 #include <string>
 #include <sstream>
@@ -13,36 +14,6 @@
 
 using std::cout;
 using std::endl;
-
-
-//fileparts::fileparts(const std::string& filename)
-//{
-////    cout<<"filename: "<<filename<<endl;
-//    size_t idot = filename.find_last_of('.');
-//    size_t islash = filename.find_last_of('/');
-//
-//    if (islash == std::string::npos)
-//    {
-//        if (idot == std::string::npos) this->name = filename;
-//        else
-//        {
-//            this->name = filename.substr(0,idot);
-//            this->ext = filename.substr(idot+1);
-//        }
-//    }
-//    else
-//    {
-//        this->path = filename.substr(0,islash);
-//        if (idot == std::string::npos) this->name = filename.substr(islash+1);
-//        else
-//        {
-//            this->name = filename.substr(islash+1,idot-islash-1);
-//            this->ext = filename.substr(idot+1);
-//        }
-//
-//    }
-//}
-
 
 
 /**< DENSE MATRIX MULTIPLICATIONS AND DIVISIONS BY SCHMIDT VALUES *********************************************************/
@@ -423,6 +394,13 @@ VT sign(VT x) { return x/std::abs(x);};
 //template<>
 //Complex sign(Complex x){ return x/std::abs(x);}
 
+template<typename VT>
+std::string to_varstring(const VT val, const uint prec = 6)
+{
+    std::stringstream out;
+    out << std::setprecision(prec) << val;
+    return out.str();
+}
 
 
 #endif // _USE_SYMMETRIES_
