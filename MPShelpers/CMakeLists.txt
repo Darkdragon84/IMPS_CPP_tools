@@ -58,11 +58,10 @@ add_library(MPShelpers_static STATIC ${SOURCES})
 add_library(MPShelpers SHARED ${SOURCES})
 
 if (${USE_NM_REP})
-#	message(STATUS "setting NM postfix")
 	set(POSTFIX "${POSTFIX}_NM")
-#	set(RELEASE_POSTFIX "${RELEASE_POSTFIX}_NM")
-#	set(RELDEB_POSTFIX "${RELDEB_POSTFIX}_NM")
 endif()
+
+
 set_target_properties(MPShelpers_static PROPERTIES DEBUG_POSTFIX "${POSTFIX}_debug")
 set_target_properties(MPShelpers_static PROPERTIES RELEASE_POSTFIX "${POSTFIX}_release")
 set_target_properties(MPShelpers_static PROPERTIES RELWITHDEBINFO_POSTFIX "${POSTFIX}_reldeb")

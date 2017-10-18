@@ -20,7 +20,8 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build Type")
 set(ARMADILLO_INCLUDE $ENV{HOME}/libs/armadillo/include CACHE FILEPATH "Path to Armadillo Include")
 
-set(MPS_HELPERS_DIR $ENV{HOME}/C++/MPShelpers CACHE FILEPATH "Path to MPS helpers")
+set(MPS_HELPERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../MPShelpers CACHE FILEPATH "Path to MPS helpers")
+#set(MPS_HELPERS_DIR $ENV{HOME}/C++/MPShelpers CACHE FILEPATH "Path to MPS helpers")
 
 set(ARPACK_DIR $ENV{HOME}/libs/arpack CACHE FILEPATH "Path to Arpack Library")
 set(ARPACK_DEBUG libarpack_debug.a CACHE STRING "Arpack Debug Library")
@@ -59,6 +60,7 @@ set(FORTRAN_LIB_RELEASE ifcore CACHE STRING "Fortran Release Library")
 ### compiler specific settings
 set(CMAKE_CXX_FLAGS "-Wall -std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -parallel -march=native")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -parallel -march=native -g")
 
 #set(CMAKE_EXE_LINK_STATIC_C_FLAGS)       # remove -Wl,-Bstatic
 #set(CMAKE_EXE_LINK_STATIC_CXX_FLAGS)
@@ -74,17 +76,18 @@ set(INSTALL_DEST ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 
 include_directories(${ARMADILLO_INCLUDE})
 
-# MPS helpers (in the final version, just link the separately built library statically, instead of compiling here)
-#include_directories(${MPS_HELPERS_DIR}/include)
-#add_subdirectory(${MPS_HELPERS_DIR} "./MPShelpers")
+# MPS helpers (link the separately built libraries statically, instead of compiling here)
 if (${USE_NM_REP})
 	add_definitions(-DFHUB_NM_REP)
 	set(MPS_HELP_LIB_DEBUG ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_debug.a)
 	set(MPS_HELP_LIB_RELASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_release.a)
+	set(MPS_HELP_LIB_RELDEB ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_reldeb.a)
 else ()
 	set(MPS_HELP_LIB_DEBUG ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_debug.a)
 	set(MPS_HELP_LIB_RELASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_release.a)
+	set(MPS_HELP_LIB_RELDEB ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_reldeb.a)
 endif()
+
 #support for symmetric MPS implementation
 add_definitions(-DSYMS)
 
@@ -92,28 +95,33 @@ add_executable(VUMPS ${SOURCES})
 
 if (${USE_NM_REP})
 	message(STATUS "using NM representation of FHUB")
+	# is there a single POSTFIX property?
 	set_target_properties(VUMPS PROPERTIES DEBUG_POSTFIX "_NM")
 	set_target_properties(VUMPS PROPERTIES RELEASE_POSTFIX "_NM")
-	#set_target_properties(MPShelpers PROPERTIES DEBUG_POSTFIX "${DEBUG_POSTFIX}_NM")
-	#set_target_properties(MPShelpers PROPERTIES RELEASE_POSTFIX "${RELEASE_POSTFIX}_NM")
+	set_target_properties(VUMPS PROPERTIES RELWITHDEBINFO_POSTFIX "_NM")
 endif()
 
 # link libraries
 link_directories(${MKLLIBS})
+
 # link MPS helper library
-#target_link_libraries(Excitations MPShelpers)
 target_link_libraries(VUMPS debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELASE})
 include_directories(${MPS_HELPERS_DIR}/include)
 
 # link arpack
 target_link_libraries(VUMPS debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELEASE})
+
 # we have to loop, as we have to specify for each single library, if it is to be linked for debug or optimized
 foreach (_lib ${LAPACKBLAS_DEBUG})
 target_link_libraries(VUMPS debug ${_lib})
 endforeach()
+
 foreach (_lib ${LAPACKBLAS_RELEASE})
 target_link_libraries(VUMPS optimized ${_lib})
 endforeach()
+
+# link fortran libraries
 target_link_libraries(VUMPS debug ${FORTRAN_LIB_DEBUG} optimized ${FORTRAN_LIB_RELEASE})
 
-install (TARGETS VUMPS COMPONENT RUNTIME DESTINATION ${INSTALL_DEST})
+# install destinations
+install(TARGETS VUMPS COMPONENT RUNTIME DESTINATION ${INSTALL_DEST})
