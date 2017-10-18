@@ -71,6 +71,7 @@ int main(int argc, char** argv)
     Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
     for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
 
+    int frmt = std::ceil(-std::log10(tol));
 //    Real dp = 1;
 //    if (np>1)
 //    {
@@ -208,7 +209,7 @@ int main(int argc, char** argv)
     double E0L = mean(E0vL);
     double E0R = mean(E0vR);
     double dE0 = E0L - E0R;
-    if (std::abs(dE0) > 1e-14) throw std::domain_error("ground state energies from AL and AR differ by "+std::to_string(dE0));
+    if (std::abs(dE0) > tol) throw std::domain_error("ground state energies from AL and AR differ by " + to_varstring(dE0));
 
     double E0 = 0.5*(E0L + E0R);
     H -= E0*SpId<Real>(d,2); /// subtract ground state energy from Hamiltonian
