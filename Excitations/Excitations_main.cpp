@@ -8,9 +8,9 @@
 
 #include "Excitations_helpers.hpp"
 
-//#ifdef _OPENMP
-//#include <omp.h>
-//#endif // _OPENMP
+#ifdef _OPENMP
+#include <omp.h>
+#endif // _OPENMP
 
 using std::cout;
 using std::cin;
@@ -72,6 +72,7 @@ int main(int argc, char** argv)
     for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
 
     int frmt = std::ceil(-std::log10(tol));
+    cout.precision(frmt);
 //    Real dp = 1;
 //    if (np>1)
 //    {
@@ -241,7 +242,15 @@ int main(int argc, char** argv)
 //        Real p_act;
 
 
+//        std::vector<CVecType> tmpvec(np);
+//        for (uint n=0; n<np;++n) tmpvec[n] = CVecType(mtot,fill::randn);
+        std::vector<CMatType> tmpvec(np);
+        for (uint n=0; n<np;++n) tmpvec[n] = CMatType(mtot,mtot,fill::randn);
+
         tt.tic();
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif // _OPENMP
         for (uint n=0; n<np; ++n)
         {
             CVecType dEtmp;
@@ -254,41 +263,44 @@ int main(int argc, char** argv)
                 ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/10,InvETol),verbose);
             };
 
-//            CVecType tmpin(mtot,fill::randn);
-//            CVecType tmpout(mtot,fill::zeros);
-//
-//            Hfun(tmpin.memptr(),tmpout.memptr());
-//            cout<<dot(tmpin,tmpout)<<endl;
-            tts.tic();
-            eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
-            cout<<"p = "<<pvec[n]<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
-            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec[n]<<": "<<imag(dEtmp)<<endl;
-            dE.row(n) = real(dEtmp);
 
-            if (saveX)
-            {
-                string tmpXname = sstr.str() + "_X" + std::to_string(n);
-                std::vector<BlockMatArray<IKey,Complex> > Xvec;
-                Xvec.reserve(nev);
-                for (uint l=0;l<nev;++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
-                if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
-                else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
-            }
-//            dEtmp.raw_print("p = "+std::to_string(pvec[n])+" "+std::to_string(N)+" pi");
+//            CVecType tmpin(mtot,fill::randn);
+//            CVecType tmpin = tmpvec[n];
+//            CVecType tmpout(mtot,fill::zeros);
+//            cout<<tmpin<<endl;
+//            cout<<tmpout<<endl;
+            eigs_n(tmpvec[n],dEtmp,X[n],nev,"SR",tol);
+
+//            Hfun(tmpin.memptr(),tmpout.memptr());
+            cout<<n<<": "<<dEtmp<<endl;
+//            tts.tic();
+//            eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
+//            cout<<"p = "<<pvec[n]<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
+//            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec[n]<<": "<<imag(dEtmp)<<endl;
+//            dE.row(n) = real(dEtmp);
+//
+//            if (saveX)
+//            {
+//                string tmpXname = sstr.str() + "_X" + std::to_string(n);
+//                std::vector<BlockMatArray<IKey,Complex> > Xvec;
+//                Xvec.reserve(nev);
+//                for (uint l=0;l<nev;++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
+//                if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
+//                else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
+//            }
+
         }
         double tel=tt.toc();
 
-
-//        dE = dE.t();
-        for (uint n=0; n<np; ++n) dE.row(n).raw_print("p = "+std::to_string(pvec[n])+" "+std::to_string(N)+" pi");
-//        for (uint n=0; n<np; ++n) cout<<"p = "<<pvec[n]<<" "<<N<<" pi: "<<dE.row(n)<<endl;
+        for (uint n=0; n<np; ++n)
+        {
+            cout<<"p = "<<pvec[n]<<" "<<N<<" pi: \t";
+            for (uint k=0;k<dE.n_cols;++k) cout<<dE(n,k)<<"\t";
+            cout<<endl;
+        }
 
         if (saveE)
         {
-//            std::string tmpname = GetUniqueFileName(saveEname,"bin",datafolder);
-//        uint ct=1;
-//        while (fileExist(tmpname)) tmpname = savename+"_"+std::to_string(ct++)+".bin";
-
             string saveEname = sstr.str()+"_dE";
             if (dE.save(Fullpath(saveEname,"bin",savefolder))) cout<<"saved dE under "<<saveEname<<endl;
             else cerr<<"failed to save dE under "<<saveEname<<endl;
