@@ -3,7 +3,16 @@
 
 static const int std_ncv = 20;
 
-int eigs_n(std::function<void (Complex*,Complex*)> MultOPx, int N, CVecType& vals, CMatType& vecs, int nev, std::string whch, double tol, const CVecType& x0, int maxit, int ncv)
+int eigs_n(std::function<void (Complex*,Complex*)> MultOPx,
+           int N,
+           CVecType& vals,
+           CMatType& vecs,
+           int nev,
+           std::string whch,
+           double tol,
+           const CVecType& x0,
+           int maxit,
+           int ncv)
 {
     vals.reset();
     vecs.reset();
@@ -158,10 +167,18 @@ int eigs_n(std::function<void (Complex*,Complex*)> MultOPx, int N, CVecType& val
     return nconv;
 }
 
-int eigs_n(const CMatType& A, CVecType& vals, CMatType& vecs,  int nev, std::string whch, double tol, const CVecType& x0, int maxit, int ncv)//, const CVecType& x0)
+int eigs_n(const CMatType& A,
+           CVecType& vals,
+           CMatType& vecs,
+           int nev,
+           std::string whch,
+           double tol,
+           const CVecType& x0,
+           int maxit,
+           int ncv)
 {
-    uint m=A.n_rows;
-    assert(m==A.n_cols);
+    uint m = A.n_rows;
+    assert(m == A.n_cols);
     if (maxit==0) maxit = m;
 
     auto MultAx=[&A,m](Complex in[], Complex out[]) -> void
@@ -170,12 +187,19 @@ int eigs_n(const CMatType& A, CVecType& vals, CMatType& vecs,  int nev, std::str
         outvec = A*invec;
     };
 
-//    cout<<"ncv:"<<ncv<<endl;
-//    return eigs_cn(MultAx,m,vals,vecs,nev,whch,tol,x0,maxit,ncv);
     return eigs_n(MultAx,m,vals,vecs,nev,whch,tol,x0,maxit,ncv);
 }
 
-int eigs_n(std::function<void (double*,double*)> MultOPx, int N, CVecType& vals, CMatType& vecs, int nev, std::string whch, double tol, const RVecType& x0, int maxit, int ncv)
+int eigs_n(std::function<void (double*,double*)> MultOPx,
+           int N,
+           CVecType& vals,
+           CMatType& vecs,
+           int nev,
+           std::string whch,
+           double tol,
+           const RVecType& x0,
+           int maxit,
+           int ncv)
 {
     vals.reset();
     vecs.reset();
@@ -318,7 +342,15 @@ int eigs_n(std::function<void (double*,double*)> MultOPx, int N, CVecType& vals,
 }
 
 
-int eigs_n(const RMatType& A, CVecType& vals, CMatType& vecs,  int nev, std::string whch, double tol, const RVecType& x0, int maxit, int ncv)
+int eigs_n(const RMatType& A,
+           CVecType& vals,
+           CMatType& vecs,
+           int nev,
+           std::string whch,
+           double tol,
+           const RVecType& x0,
+           int maxit,
+           int ncv)
 {
     uint m=A.n_rows;
     assert(m==A.n_cols);
@@ -334,7 +366,16 @@ int eigs_n(const RMatType& A, CVecType& vals, CMatType& vecs,  int nev, std::str
     return eigs_n(MultAx,m,vals,vecs,nev,whch,tol,x0,maxit,ncv);
 }
 
-int eigs_rs(std::function<void (double*,double*)> MultOPx, int N, RVecType& vals, RMatType& vecs, int nev, std::string whch, double tol, const RVecType& x0, int maxit, int ncv)
+int eigs_rs(std::function<void (double*,double*)> MultOPx,
+            int N,
+            RVecType& vals,
+            RMatType& vecs,
+            int nev,
+            std::string whch,
+            double tol,
+            const RVecType& x0,
+            int maxit,
+            int ncv)
 {
 
     vals.reset();
@@ -452,7 +493,15 @@ int eigs_rs(std::function<void (double*,double*)> MultOPx, int N, RVecType& vals
     return nconv;
 }
 
-int eigs_rs(const RMatType& A, RVecType& vals, RMatType& vecs,  int nev, std::string whch, double tol, const RVecType& x0, int maxit, int ncv)
+int eigs_rs(const RMatType& A,
+            RVecType& vals,
+            RMatType& vecs,
+            int nev,
+            std::string whch,
+            double tol,
+            const RVecType& x0,
+            int maxit,
+            int ncv)
 {
     uint m=A.n_rows;
     assert(m==A.n_cols);
