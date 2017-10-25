@@ -14,9 +14,6 @@
 
 using namespace arma; // I do realize this is not optimal, but removing this would take a lot of fixing throughout all sorts of other .hpp's and .cpp's
 
-//using arma::Mat;
-//using arma::Col;
-
 /// typedefs
 using Real = double;
 using uint = unsigned int;
@@ -29,12 +26,6 @@ using CVecType = Col<Complex>;
 using IVecType = Col<int>;
 using UIVecType = Col<uint>;
 using BoolVecType = Col<bool>;
-
-//using pRMatType = std::shared_ptr<RMatType>;
-//using pCMatType = std::shared_ptr<CMatType>;
-//using pRVecType = std::shared_ptr<RVecType>;
-//using pCVecType = std::shared_ptr<CVecType>;
-//using pIVecType = std::shared_ptr<IVecType>;
 
 #ifdef COMPLEX
 using Scalar = Complex;
