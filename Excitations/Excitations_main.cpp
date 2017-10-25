@@ -8,10 +8,6 @@
 
 #include "Excitations_helpers.hpp"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif // _OPENMP
-
 using std::cout;
 using std::cin;
 using std::endl;
@@ -37,7 +33,6 @@ int main(int argc, char** argv)
     uint N=2, nev=4, np=1, UC_shift=0;
     Real pmin, pmax;
     bool verbose=false, saveE=false, saveX=false, test=false, proj=false;
-//    Complex kfac;
 
     uint coutprec = 12;
     cout.precision(coutprec);
@@ -60,7 +55,6 @@ int main(int argc, char** argv)
     pp.GetValue(trans_op,"op");
     pp.GetValue(test,"test");
     pp.GetValue(obsnames,"obs");
-//    pp.GetValue(topo,"topo");
 
     /// momentum values
     pp.GetValue(pmin,"pmin",true);
@@ -73,17 +67,9 @@ int main(int argc, char** argv)
 
     int frmt = std::ceil(-std::log10(tol));
     cout.precision(frmt);
-//    Real dp = 1;
-//    if (np>1)
-//    {
-//        dp = (pmax - pmin)/double(np-1);
-//        for (uint k=0; k<np; ++k)pvec.emplace_back(pmin + k*dp);
-//    }
-//    else pvec.emplace_back(pmin);
 
     /// create model
     modptr pmod = CreateModel(pp,verbose);
-//    if (verbose) pmod->ShowParams();
 
     uint d = pmod->GetLocalDim();
     auto H = pmod->GetLocalHam();
@@ -104,7 +90,6 @@ int main(int argc, char** argv)
     {
         savefolder = GetUniquePath(datafolder + "/" + sstr.str());
         if (!mkdir(savefolder)) throw std::runtime_error("couldn't create "+savefolder);
-//        saveEname = GetUniqueFileName(sstr.str()+"_dE","bin",savefolder);
     }
 
 
@@ -229,28 +214,17 @@ int main(int argc, char** argv)
     {
         /// calculate B independent constants for applying effective Hamiltonian
         IDiagArray HLtot,HRtot;
-
         HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,max(tol/100,InvETol),0,verbose);
 
         /// actually calculate excitations
         RMatType dE(np,nev,fill::zeros);
         std::vector<CMatType> X(np);
-//        std::vector<RVecType> dE(np);
-//        std::function<void (Complex*,Complex*)> Hfun;
 
         tictoc tt,tts;
-//        Real p_act;
 
-
-//        std::vector<CVecType> tmpvec(np);
-//        for (uint n=0; n<np;++n) tmpvec[n] = CVecType(mtot,fill::randn);
-        std::vector<CMatType> tmpvec(np);
-        for (uint n=0; n<np;++n) tmpvec[n] = CMatType(mtot,mtot,fill::randn);
+        /// unfortunately, ARPACK is not thread safe, so we cannot parallelize the following loop :-(
 
         tt.tic();
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif // _OPENMP
         for (uint n=0; n<np; ++n)
         {
             CVecType dEtmp;
@@ -263,31 +237,21 @@ int main(int argc, char** argv)
                 ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/10,InvETol),verbose);
             };
 
+            tts.tic();
+            eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
+            cout<<"p = "<<pvec[n]<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
+            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec[n]<<": "<<imag(dEtmp)<<endl;
+            dE.row(n) = real(dEtmp);
 
-//            CVecType tmpin(mtot,fill::randn);
-//            CVecType tmpin = tmpvec[n];
-//            CVecType tmpout(mtot,fill::zeros);
-//            cout<<tmpin<<endl;
-//            cout<<tmpout<<endl;
-            eigs_n(tmpvec[n],dEtmp,X[n],nev,"SR",tol);
-
-//            Hfun(tmpin.memptr(),tmpout.memptr());
-            cout<<n<<": "<<dEtmp<<endl;
-//            tts.tic();
-//            eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
-//            cout<<"p = "<<pvec[n]<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
-//            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec[n]<<": "<<imag(dEtmp)<<endl;
-//            dE.row(n) = real(dEtmp);
-//
-//            if (saveX)
-//            {
-//                string tmpXname = sstr.str() + "_X" + std::to_string(n);
-//                std::vector<BlockMatArray<IKey,Complex> > Xvec;
-//                Xvec.reserve(nev);
-//                for (uint l=0;l<nev;++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
-//                if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
-//                else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
-//            }
+            if (saveX)
+            {
+                string tmpXname = sstr.str() + "_X" + std::to_string(n);
+                std::vector<BlockMatArray<IKey,Complex> > Xvec;
+                Xvec.reserve(nev);
+                for (uint l=0;l<nev;++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
+                if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
+                else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
+            }
 
         }
         double tel=tt.toc();
