@@ -1256,7 +1256,13 @@ saveIMPS(const BlockLamArray<KT>& Lamvec, const BlockDiagMatArray<KT,VT>& Cvec, 
 
 template<typename KT, typename VT, typename GO>
 bool
-loadIMPS(BlockLamArray<KT>& Lamvec, BlockDiagMatArray<KT,VT>& Cvec, MPSBlockMatArray<KT,VT>& ALvec, MPSBlockMatArray<KT,VT>& ARvec, std::string filename, const GO& GroupObj)
+loadIMPS(BlockLamArray<KT>& Lamvec,
+         BlockDiagMatArray<KT,VT>& Cvec,
+         MPSBlockMatArray<KT,VT>& ALvec,
+         MPSBlockMatArray<KT,VT>& ARvec,
+         std::string filename,
+         const GO& GroupObj,
+         bool verbose=false)
 {
     bool success = true;
     if (!RegFileExist(filename))
@@ -1291,7 +1297,7 @@ loadIMPS(BlockLamArray<KT>& Lamvec, BlockDiagMatArray<KT,VT>& Cvec, MPSBlockMatA
         return false;
     }
 
-    cout<<"loaded "<<filename<<endl;
+    if (verbose) cout<<"loaded "<<filename<<endl;
     file.close();
     return success;
 }
