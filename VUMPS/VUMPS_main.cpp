@@ -408,13 +408,13 @@ int main(int argc, char** argv)
 
     /// regauge state in the middle of the UC.
     /// The gauges are fine around the edges, but not inside. Actually find out, why
-    qr(Rtmp,Cvec.back(),l);
-    Cvec.back() = Rtmp;
-    for (uint n=0; n<N; ++n)
-    {
-        ALvec[n] = qr(Rtmp,Cvec[PBC(n-1)]*ARvec[n],l);
-        if (n<N-1) Cvec[n] = Rtmp;
-    }
+//    qr(Rtmp,Cvec.back(),l);
+//    Cvec.back() = Rtmp;
+//    for (uint n=0; n<N; ++n)
+//    {
+//        ALvec[n] = qr(Rtmp,Cvec[PBC(n-1)]*ARvec[n],l);
+//        if (n<N-1) Cvec[n] = Rtmp;
+//    }
     cout<<"check gauge:"<<endl;
     for (uint n=0;n<N;++n) cout<<n<<": "<<norm(ALvec[n]*Cvec[n] - Cvec[PBC(n-1)]*ARvec[n])<<endl;
 
