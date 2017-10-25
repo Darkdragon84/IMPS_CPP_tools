@@ -8,9 +8,9 @@
 
 #include "Excitations_helpers.hpp"
 
-//#ifdef _OPENMP
-//#include <omp.h>
-//#endif // _OPENMP
+#ifdef _OPENMP
+#include <omp.h>
+#endif // _OPENMP
 
 using std::cout;
 using std::cin;
