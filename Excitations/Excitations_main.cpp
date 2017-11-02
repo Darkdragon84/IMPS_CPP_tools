@@ -61,10 +61,6 @@ int main(int argc, char** argv)
     pp.GetValue(pmax,"pmax",true);
     pp.GetValue(np,"np",true);
 
-    pvec.emplace_back(pmin);
-    Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
-    for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
-
     int frmt = std::ceil(-std::log10(tol));
     cout.precision(frmt);
 
@@ -92,7 +88,6 @@ int main(int argc, char** argv)
         if (!mkdir(savefolder)) throw std::runtime_error("couldn't create "+savefolder);
     }
 
-
     /// load IMPS state
     ILamArray Lamvec;
     IDiagArray Cvec,Lvec,Rvec;
@@ -102,8 +97,12 @@ int main(int argc, char** argv)
     if (!loadIMPS(Lamvec,Cvec,ALvec,ARvec,filename,pmod->GetGroupObj())) throw std::runtime_error(filename+" could not be loaded");
 
 
-    /// unit cell size and PBC function to wrap around indices
+    /// unit cell size and momentum values
     N = ALvec.size();
+
+    pvec.emplace_back(pmin);
+    Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
+    for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
 //    auto PBC = [N](int x) -> int {return (x + N)%N;};
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
@@ -139,7 +138,8 @@ int main(int argc, char** argv)
         shift(Lvec,UC_shift);
     }
 //        Cit += UC_shift;
-    Real OLtol = std::max(tol/100,1e-15);
+//    Real OLtol = std::max(tol/100,1e-15);
+    Real OLtol = 1e-14;
     OLLv = TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
     OLRv = TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
 
@@ -151,8 +151,8 @@ int main(int argc, char** argv)
     if (std::abs(dOL) > 10*OLtol) cerr<<"dominant left and right overlap between AL and AR differs by "<<dOL<<endl;
     Real OL = 0.5*(OLR + OLL);
 
-    /// fix overlap between AL and AR to be (real and) positive
-    ARvec.front() *= sign(OL);
+    /// fix overlap between AL and AR to be (real and) positive (actually, we probably don't want this)
+//    ARvec.front() *= sign(OL);
 
     LM = BlockMat<IKey,Scalar>(VL.front());
     RM = BlockMat<IKey,Scalar>(VR.front());
@@ -223,7 +223,6 @@ int main(int argc, char** argv)
         tictoc tt,tts;
 
         /// unfortunately, ARPACK is not thread safe, so we cannot parallelize the following loop :-(
-
         tt.tic();
         for (uint n=0; n<np; ++n)
         {
