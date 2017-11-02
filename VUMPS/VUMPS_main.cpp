@@ -208,6 +208,7 @@ int main(int argc, char** argv)
         ++ct;
         exp_prec = max(prec);
         ttstep.tic();
+
         for (uint nn=0; nn<N; ++nn)
         {
             EHL0[nn] = EHL;
@@ -416,7 +417,7 @@ int main(int argc, char** argv)
 //        if (n<N-1) Cvec[n] = Rtmp;
 //    }
     cout<<"check gauge:"<<endl;
-    for (uint n=0;n<N;++n) cout<<n<<": "<<norm(ALvec[n]*Cvec[n] - Cvec[PBC(n-1)]*ARvec[n])<<endl;
+    for (uint n=0;n<N;++n) cout<<n<<": "<<norm_inf(ALvec[n]*Cvec[n] - Cvec[PBC(n-1)]*ARvec[n])<<endl;
 
 
     if (savestate || plotnorm)
