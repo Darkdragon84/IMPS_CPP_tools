@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 //    arma_rng::set_seed_random();
     std::string filename,mode="SR",datafolder=".",trans_op="";
     std::vector<int> exc_keyvec, QN;
-    std::vector<Real> pvec;
+//    std::vector<Real> pvec;
     std::vector<std::string> obsnames;
     Real tol = 1e-10,InvETol=1e-14;
     uint N=2, nev=4, np=1, UC_shift=0;
@@ -82,10 +82,17 @@ int main(int argc, char** argv)
     sstr<<"_K";
     sstr<<K;
 
+    /// momentum values
+    RVecType pvec = linspace(pmin, pmax, np);
+
     if (saveE || saveX)
     {
         savefolder = GetUniquePath(datafolder + "/" + sstr.str());
         if (!mkdir(savefolder)) throw std::runtime_error("couldn't create "+savefolder);
+
+        string savepname = sstr.str()+"_pvec";
+        if (pvec.save(Fullpath(savepname,"bin",savefolder))) cout<<"saved pvec under "<<savepname<<endl;
+        else cerr<<"failed to save pvec under "<<savepname<<endl;
     }
 
     /// load IMPS state
@@ -96,13 +103,12 @@ int main(int argc, char** argv)
 
     if (!loadIMPS(Lamvec,Cvec,ALvec,ARvec,filename,pmod->GetGroupObj())) throw std::runtime_error(filename+" could not be loaded");
 
-
-    /// unit cell size and momentum values
+    /// unit cell size
     N = ALvec.size();
 
-    pvec.emplace_back(pmin);
-    Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
-    for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
+//    pvec.emplace_back(pmin);
+//    Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
+//    for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
 //    auto PBC = [N](int x) -> int {return (x + N)%N;};
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
@@ -227,7 +233,7 @@ int main(int argc, char** argv)
         for (uint n=0; n<np; ++n)
         {
             CVecType dEtmp;
-            Real p_act = pvec[n]*datum::pi*N;
+            Real p_act = pvec(n)*datum::pi*N;
             Complex kfac = Complex(cos(p_act),sin(p_act));
 
             std::function<void (Complex*,Complex*)> Hfun =
@@ -238,8 +244,8 @@ int main(int argc, char** argv)
 
             tts.tic();
             eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
-            cout<<"p = "<<pvec[n]<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
-            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec[n]<<": "<<imag(dEtmp)<<endl;
+            cout<<"p = "<<pvec(n)<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
+            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
             dE.row(n) = real(dEtmp);
 
             if (saveX)
@@ -257,7 +263,7 @@ int main(int argc, char** argv)
 
         for (uint n=0; n<np; ++n)
         {
-            cout<<"p = "<<pvec[n]<<" "<<N<<" pi: \t";
+            cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
             for (uint k=0;k<dE.n_cols;++k) cout<<dE(n,k)<<"\t";
             cout<<endl;
         }
@@ -267,6 +273,7 @@ int main(int argc, char** argv)
             string saveEname = sstr.str()+"_dE";
             if (dE.save(Fullpath(saveEname,"bin",savefolder))) cout<<"saved dE under "<<saveEname<<endl;
             else cerr<<"failed to save dE under "<<saveEname<<endl;
+
         }
 
         if (tel>60) cout<<"elapsed time: "<<tel/double(60)<<" min."<<endl;
