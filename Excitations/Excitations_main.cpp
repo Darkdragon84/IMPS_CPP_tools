@@ -166,33 +166,6 @@ int main(int argc, char** argv)
     BlockDiagMat<IKey,Scalar> L(Lvec.back());
     BlockDiagMat<IKey,Scalar> R(Rvec.back());
 
-    if (test)
-    {
-        auto obs = pmod->GetObservables(obsnames);
-
-        cout<<"I2K:"<<endl;
-        cout<<I2K<<endl;
-        Lamvec.ShowDims("lam");
-        if (!obs.empty())
-        {
-            cout<<"== AL "<<std::string(94,'=')<<endl;
-            MeasureObservables(obs,ALvec,IDiagArray(),Rvec,true);
-            cout<<"== AR "<<std::string(94,'=')<<endl;
-            MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
-        }
-        cout<<"sign(OLL)="<<sign(OLLv(0))<<", sign(OLR)="<<sign(OLLv(0))<<endl;
-        OLL = std::abs(OLL);
-        OLR = std::abs(OLR);
-        TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
-        TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
-        cout<<std::string(100,'-')<<endl;
-
-//        teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,OLL,OLR);
-
-        cout<<"folder: "<<savefolder<<endl;
-//        cout<<"name: "<<fileparts(saveEname).name<<endl;
-    }
-
 //    teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,real(OLLv(0)),real(OLRv(0)));
 
     /// calculate ground state energy density to subtract from Hamiltonian
@@ -213,72 +186,103 @@ int main(int argc, char** argv)
     uint mtot = XDims(xdims,NLvec,ARvec,K);
     if (!all(xdims)) throw std::domain_error("no excitations for this quantum number");
 
-//    cout<<"xdims:"<<endl;
-//    for (uint n=0;n<N;++n) cout<<n<<":"<<endl<<xdims[n]<<endl;
 
-    if(!test)
+    if (test)
     {
-        /// calculate B independent constants for applying effective Hamiltonian
-        IDiagArray HLtot,HRtot;
-        HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,max(tol/100,InvETol),0,verbose);
+        auto obs = pmod->GetObservables(obsnames);
 
-        /// actually calculate excitations
-        RMatType dE(np,nev,fill::zeros);
-        std::vector<CMatType> X(np);
-
-        tictoc tt,tts;
-
-        /// unfortunately, ARPACK is not thread safe, so we cannot parallelize the following loop :-(
-        tt.tic();
-        for (uint n=0; n<np; ++n)
+        cout<<"I2K:"<<endl;
+        cout<<I2K<<endl;
+        Lamvec.ShowDims("lam");
+        if (!obs.empty())
         {
-            CVecType dEtmp;
-            Real p_act = pvec(n)*datum::pi*N;
-            Complex kfac = Complex(cos(p_act),sin(p_act));
+            Real p=0.5;
+            pp.GetValue(p,"p");
 
-            std::function<void (Complex*,Complex*)> Hfun =
-            [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LM,&RM,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
-            {
-                ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/10,InvETol),verbose);
-            };
+            cout<<"== AL "<<std::string(94,'=')<<endl;
+            auto eobsL = MeasureObservables(obs,ALvec,IDiagArray(),Rvec,true);
+            cout<<"== AR "<<std::string(94,'=')<<endl;
+            auto eobsR = MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
 
-            tts.tic();
-            eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
-            cout<<"p = "<<pvec(n)<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
-            if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
-            dE.row(n) = real(dEtmp);
-
-            if (saveX)
-            {
-                string tmpXname = sstr.str() + "_X" + std::to_string(n);
-                std::vector<BlockMatArray<IKey,Complex> > Xvec;
-                Xvec.reserve(nev);
-                for (uint l=0;l<nev;++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
-                if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
-                else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
-            }
-
+            MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,eobsL,xdims,mtot,p,tol,InvETol,verbose);
         }
-        double tel=tt.toc();
+        cout<<"sign(OLL)="<<sign(OLLv(0))<<", sign(OLR)="<<sign(OLLv(0))<<endl;
+        OLL = std::abs(OLL);
+        OLR = std::abs(OLR);
+        TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
+        TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
+        cout<<std::string(100,'-')<<endl;
 
-        for (uint n=0; n<np; ++n)
-        {
-            cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
-            for (uint k=0;k<dE.n_cols;++k) cout<<dE(n,k)<<"\t";
-            cout<<endl;
-        }
+        /// early bail out for testing
+        return 0;
+//        teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,OLL,OLR);
 
-        if (saveE)
-        {
-            string saveEname = sstr.str()+"_dE";
-            if (dE.save(Fullpath(saveEname,"bin",savefolder))) cout<<"saved dE under "<<saveEname<<endl;
-            else cerr<<"failed to save dE under "<<saveEname<<endl;
-
-        }
-
-        if (tel>60) cout<<"elapsed time: "<<tel/double(60)<<" min."<<endl;
-        else cout<<"elapsed time: "<<tel<<" s."<<endl;
+//        cout<<"folder: "<<savefolder<<endl;
+//        cout<<"name: "<<fileparts(saveEname).name<<endl;
     }
+
+
+
+    /// calculate B independent constants for applying effective Hamiltonian
+    IDiagArray HLtot,HRtot;
+    HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,max(tol/100,InvETol),0,verbose);
+
+    /// actually calculate excitations
+    RMatType dE(np,nev,fill::zeros);
+    std::vector<CMatType> X(np);
+
+    tictoc tt,tts;
+
+    /// unfortunately, ARPACK is not thread safe, so we cannot parallelize the following loop :-(
+    tt.tic();
+    for (uint n=0; n<np; ++n)
+    {
+        CVecType dEtmp;
+        Real p_act = pvec(n)*datum::pi*N;
+        Complex kfac = Complex(cos(p_act),sin(p_act));
+
+        std::function<void (Complex*,Complex*)> Hfun =
+        [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LM,&RM,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
+        {
+            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/10,InvETol),verbose);
+        };
+
+        tts.tic();
+        eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
+        cout<<"p = "<<pvec(n)<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
+        if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
+        dE.row(n) = real(dEtmp);
+
+        if (saveX)
+        {
+            string tmpXname = sstr.str() + "_X" + std::to_string(n);
+            std::vector<BlockMatArray<IKey,Complex> > Xvec;
+            Xvec.reserve(nev);
+            for (uint l=0; l<nev; ++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
+            if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
+            else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
+        }
+
+    }
+    double tel=tt.toc();
+
+    for (uint n=0; n<np; ++n)
+    {
+        cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
+        for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
+        cout<<endl;
+    }
+
+    if (saveE)
+    {
+        string saveEname = sstr.str()+"_dE";
+        if (dE.save(Fullpath(saveEname,"bin",savefolder))) cout<<"saved dE under "<<saveEname<<endl;
+        else cerr<<"failed to save dE under "<<saveEname<<endl;
+
+    }
+
+    if (tel>60) cout<<"elapsed time: "<<tel/double(60)<<" min."<<endl;
+    else cout<<"elapsed time: "<<tel<<" s."<<endl;
 
     return 0;
 }
