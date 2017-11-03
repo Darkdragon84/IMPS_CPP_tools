@@ -501,7 +501,7 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
     cout<<"InvETol="<<InvETol<<endl;
     for (uint n=0; n<OPBL.size(); ++n)cout<<norm_inf(OPBL[n])<<endl;
 
-    bool have_EOPBL = norm_inf(OPBL.back()) > InvETol;
+    bool have_EOPBL = norm_inf(OPBL.back()) > 10*InvETol;
     /// contribs from all other UC to the left (checked)
 
     if (have_EOPBL)
