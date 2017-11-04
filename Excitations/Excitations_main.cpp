@@ -24,7 +24,7 @@ using ILamArray = BlockLamArray<IKey>;
 
 int main(int argc, char** argv)
 {
-//    arma_rng::set_seed_random();
+    arma_rng::set_seed_random();
     std::string filename,mode="SR",datafolder=".",trans_op="";
     std::vector<int> exc_keyvec, QN;
 //    std::vector<Real> pvec;
@@ -75,26 +75,8 @@ int main(int argc, char** argv)
     if (exc_keyvec.size()!=nsym) throw std::domain_error("K has wrong number of quantum numbers");
     IKey K(pmod->GetGroupObj(),exc_keyvec);
 
-    std::stringstream sstr;
-    string savefolder;
-
-    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
-    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
-    sstr<<"_K";
-    sstr<<K;
-
     /// momentum values
     RVecType pvec = linspace(pmin, pmax, np);
-
-    if (saveE || saveX)
-    {
-        savefolder = GetUniquePath(datafolder + "/" + sstr.str());
-        if (!mkdir(savefolder)) throw std::runtime_error("couldn't create "+savefolder);
-
-        string savepname = sstr.str()+"_pvec";
-        if (pvec.save(Fullpath(savepname,"bin",savefolder))) cout<<"saved pvec under "<<savepname<<endl;
-        else cerr<<"failed to save pvec under "<<savepname<<endl;
-    }
 
     /// load IMPS state
     ILamArray Lamvec;
@@ -102,7 +84,7 @@ int main(int argc, char** argv)
     IMPSArray ALvec,ARvec,NLvec;
     MPSBlockMatArray<IKey,Complex> Bin,Bout;
 
-    if (!loadIMPS(Lamvec,Cvec,ALvec,ARvec,filename,pmod->GetGroupObj())) throw std::runtime_error(filename+" could not be loaded");
+    if (!loadIMPS(Lamvec,Cvec,ALvec,ARvec,pmod->GetGroupObj(),filename)) throw std::runtime_error(filename+" could not be loaded");
 
     /// unit cell size
     N = ALvec.size();
@@ -114,6 +96,8 @@ int main(int argc, char** argv)
     if (ARvec != I2K) throw std::runtime_error("AR not compatible with I2K from model");
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
+
+
 
     /// apply global shift to state
     if (glob_shift > N)
@@ -207,6 +191,30 @@ int main(int argc, char** argv)
 //    }
 
 
+    /// prepare output filenames/folders etc.
+    std::stringstream sstr;
+    string savefolder;
+
+    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
+    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
+    sstr<<"_K";
+    sstr<<K;
+
+    if (saveE || saveX)
+    {
+        savefolder = GetUniquePath(datafolder + "/" + sstr.str());
+        if (!mkdir(savefolder)) throw std::runtime_error("couldn't create "+savefolder);
+
+        /// save vector of momentum values
+        string savepname = sstr.str()+"_pvec";
+        if (pvec.save(Fullpath(savepname,"bin",savefolder))) cout<<"saved pvec under "<<savepname<<endl;
+        else cerr<<"failed to save pvec under "<<savepname<<endl;
+
+        /// save ground state, from which excitations are created, INCLUDING shifts or transformations to AR
+        string saveALRname = sstr.str()+"_ALRN";
+        if (saveALRN(Cvec,Lvec,Rvec,ALvec,ARvec,NLvec,savefolder+"/"+saveALRname)) cout<<"saved ALRN under "<<saveALRname<<endl;
+        else cerr<<"failed to save ALRN under "<<saveALRname<<endl;
+    }
 
     /// calculate B independent constants for applying effective Hamiltonian
     IDiagArray HLtot,HRtot;
