@@ -422,8 +422,11 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
 
     uint N = Xin.size();
     assert(Xout.size() == N);
+
+    #ifndef NDEBUG
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
+    #endif // NDEBUG
 
 //    uint d = OP.GetLocalDim();
     Complex ckfac = std::conj(kfac);
@@ -458,7 +461,6 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
     else EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
 
 
-
     /// combined AB overlap contribs of both within and right of current UC (checked)
     ABRtot.emplace_front(kfac*EBR);
     {
@@ -481,7 +483,16 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
     /// cumulative contributions from same UC (checked)
 //    HBL.emplace_back(ApplyTMmixedLeft(HLtot.back()*Bin.front(),AL.front()) +
 //                     ApplyOpTMLeftGen(H,AL.back()*Bin.front() + ckfac*(Bin.back()*AR.front()),AL.back()*AL.front()));
-    OPBL.emplace_back(ApplyTMmixedLeft(OPLtot.back()*Bin.front(),AL.front()) + ApplyOpTMLeftGen(OP,Bin.front(),AL.front()));
+    OPBL.emplace_back(ApplyTMmixedLeft(OPLtot.back()*Bin.front(),AL.front()) +
+                      ApplyOpTMLeftGen(OP,Bin.front(),AL.front()));
+
+//    auto tmp1 = ApplyTMmixedLeft(OPLtot.back()*Bin.front(),AL.front());
+//    auto tmp2 = ApplyOpTMLeftGen(OP,Bin.front(),AL.front());
+
+//    uint n=1;
+//    cout<<"n="<<n<<":"<<endl;
+//    tmp1.print("tmp1");
+//    tmp2.print("tmp2");
 
     {
         auto ALit = AL.cbegin() + 1;
@@ -490,16 +501,23 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
         auto OPLit = OPLtot.cbegin();
         for ( ; ALit!=AL.cend(); ++ALit,++ARit,++Bit,++OPLit)
         {
-//            HBL.emplace_back(ApplyTMmixedLeft(HBL.back()*(*ARit) + (*HLit)*(*Bit),*ALit) +
-//                             ApplyOpTMLeftGen(H,(*(ALit-1))*(*Bit) + (*(Bit-1))*(*ARit),(*(ALit-1))*(*ALit) ) );
+//            tmp1 = ApplyTMmixedLeft(OPBL.back()*(*ARit),*ALit);
+//            tmp2 = ApplyTMmixedLeft((*OPLit)*(*Bit),*ALit);
+//            auto tmp3 = ApplyOpTMLeftGen(OP,*Bit,*ALit);
+
             OPBL.emplace_back(ApplyTMmixedLeft(OPBL.back()*(*ARit) + (*OPLit)*(*Bit),*ALit) +
                               ApplyOpTMLeftGen(OP,*Bit,*ALit) ); /// here *ARit = AR[n], *ALit = AL[n], *OPLit = OPLtot[n-1]
+
+//            cout<<"n="<<++n<<endl;
+//            tmp1.print("tmp1");
+//            tmp2.print("tmp2");
+//            tmp3.print("tmp3");
         }
     }
 
 //    OPBL.print("OPBL");
-    cout<<"InvETol="<<InvETol<<endl;
-    for (uint n=0; n<OPBL.size(); ++n)cout<<norm_inf(OPBL[n])<<endl;
+//    cout<<"InvETol="<<InvETol<<endl;
+//    for (uint n=0; n<OPBL.size(); ++n)cout<<norm_inf(OPBL[n])<<endl;
 
     bool have_EOPBL = norm_inf(OPBL.back()) > 10*InvETol;
     /// contribs from all other UC to the left (checked)
@@ -515,94 +533,57 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
     /** terms where Bin and Bout are on top of each other (checked)                                **/
     /************************************************************************************************/
 
-    /// h left and right of B's (checked)
+//    cout<<"Bin and Bout on top of each other"<<endl;
+
+    /// OP left and right of B's (checked)
     /// first fill and expand Bout to length N here
     for (uint n=0; n<N; ++n)
     {
-        Bout.emplace_back(OPLtot[PBC(n-1)]*Bin[n] + Bin[n]*OPRtot[PBC(n+1)]);
+        Bout.emplace_back(OPLtot[PBC(n-1)]*Bin[n] + Bin[n]*OPRtot[PBC(n+1)] + ApplyOperator(Bin[n],OP));
+//        cout<<n<<": "<<norm_inf(Bout.back())<<endl;
     }
 
-    /// h on B's (checked)
+    /************************************************************************************************/
+    /** terms where Bin is left of Bout  (checked)                                                 **/
+    /************************************************************************************************/
+    /// somehow all these terms are zero!!
+    /// more specifically, \sum_s (A(n)[s]_L)' * OPLtot[n-1] B(n)[s] = -\sum_ks OP_ks (A(n)[k])' * B(n)[s] for all n
+    /// OPLtot is a direct sum of weighted identities in each symmetry sector, OPLtot(n) = \oplus_a o_a Id_a
+
+//    cout<<"Bin left of Bout"<<endl;
+
+    /// n=0 has only contribs from next left UC (checked)
+    if (have_EOPBL)
+    {
+//        cout<<"0: "<<norm_inf(ckfac*EOPBL*AR.front())<<endl;
+        Bout.front() += ckfac*EOPBL*AR.front();
+    }
+
+    /// n>0 also has contribs from within same UC (checked)
+    for (uint n=1; n<N; ++n)
+    {
+        auto tmpmat(OPBL[n-1]);
+        if (have_EOPBL)
+        {
+            EOPBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EOPBL);
+            tmpmat += ckfac*EOPBL;
+        }
+
+//        cout<<n<<": "<<norm_inf(tmpmat*AR[n])<<endl;
+        Bout[n] += tmpmat*AR[n];
+    }
+
+    /************************************************************************************************/
+    /** terms where Bin is right of Bout (checked)                                                 **/
+    /************************************************************************************************/
+
+//    cout<<"Bin right of Bout"<<endl;
+
     for (uint n=0; n<N; ++n)
     {
-//        auto HAB = ApplyOperator(AL[PBC(n-1)]*Bin[n],H);
-//        auto HBA = ApplyOperator(Bin[n]*AR[PBC(n+1)],H);
-//        for (uint s=0; s<d; ++s)
-//        {
-//            for (uint k=0; k<d; ++k)
-//            {
-//                Bout[n][s] += AL[PBC(n-1)][k].t()*HAB[k*d+s] + HBA[s*d+k]*AR[PBC(n+1)][k].t();
-//            }
-//        }
-        Bout[n] += ApplyOperator(Bin[n],OP);
+//        cout<<n<<": "<<norm_inf(OPLtot[PBC(n-1)]*AL[n]*ABRtot[PBC(n+1)] + ApplyOperator(AL[n],OP)*ABRtot[PBC(n+1)])<<endl;
+        Bout[n] += OPLtot[PBC(n-1)]*AL[n]*ABRtot[PBC(n+1)] + ApplyOperator(AL[n],OP)*ABRtot[PBC(n+1)];
     }
-//
-//    /************************************************************************************************/
-//    /** terms where Bin is left of Bout  (checked)                                                 **/
-//    /************************************************************************************************/
-//    /// somehow all these terms are zero!!
-//
-//    /// n=0 has only contribs from next left UC (checked)
-//    if (have_EOPBL) Bout.front() += ckfac*EOPBL*AR.front();
-////    Bout.front() += ckfac*(*pEHBL)*AR.front();
-//
-////    auto HBA = ApplyOperator(Bin.back()*AR.front(),H);
-////    for (uint s=0; s<d; ++s)
-////    {
-////        for (uint k=0; k<d; ++k)
-////        {
-////            Bout.front()[s] += ckfac*AL.back()[k].t()*HBA[k*d+s];
-////        }
-////    }
-//
-//
-//    /// n>0 also has contribs from within same UC (checked)
-//    for (uint n=1; n<N; ++n)
-//    {
-////        EHBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EHBL);
-////        Bout[n] += (HBL[n-1] + ckfac*EHBL)*AR[n];
-//
-//        auto tmpmat(OPBL[n-1]);
-//        if (have_EOPBL)
-//        {
-//            EOPBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EOPBL);
-//            tmpmat += ckfac*EOPBL;
-//        }
-//        Bout[n] += tmpmat*AR[n];
-////        auto HBA = ApplyOperator(Bin[n-1]*AR[n],H);
-////        for (uint s=0; s<d; ++s)
-////        {
-////            for (uint k=0; k<d; ++k)
-////            {
-////                Bout[n][s] += AL[n-1][k].t()*HBA[k*d+s];
-////            }
-////        }
-//    }
-//
-//    /************************************************************************************************/
-//    /** terms where Bin is right of Bout (checked)                                                 **/
-//    /************************************************************************************************/
-//    for (uint n=0; n<N; ++n)
-//    {
-////        auto Atmp = Bin[PBC(n+1)] + AL[PBC(n+1)]*ABRtot[PBC(n+2)];
-////        if (n==N-1) Atmp*=kfac;
-////
-////        Bout[n] += HLtot[PBC(n-1)]*AL[n]*ABRtot[PBC(n+1)];
-////
-////        auto HAA = ApplyOperator(AL[PBC(n-1)]*(AL[n]*ABRtot[PBC(n+1)]),H);
-////        auto HAB = ApplyOperator(AL[n]*Atmp,H);
-////
-////        for (uint s=0; s<d; ++s)
-////        {
-////            for (uint k=0; k<d; ++k)
-////            {
-////                Bout[n][s] += AL[PBC(n-1)][k].t()*HAA[k*d+s];
-////                Bout[n][s] += HAB[s*d+k]*AR[PBC(n+1)][k].t();
-////            }
-////        }
-//
-//        Bout[n] += OPLtot[PBC(n-1)]*AL[n]*ABRtot[PBC(n+1)] + ApplyOperator(AL[n],OP)*ABRtot[PBC(n+1)];
-//    }
 
     /************************************************************************************************/
     /** calculate Xout from Bout                                                                   **/
@@ -620,7 +601,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
               const BlockDiagMat<KT,VTA>& L,
               const BlockDiagMat<KT,VTA>& R,
               const SparseOperator<VTH>& O,
-              double tol=1e-14,
+              double InvETol=1e-14,
               int maxit=0,
               bool verbose=false)
 {
@@ -640,7 +621,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
     {
         OPL.emplace_back(ApplyOpTMLeftDiag(O,*iter)  + ApplyTMLeft(*iter,OPL.back()) ); /// here, *iter is AL[n]
     }
-    if (abs(trace(OPL.back()*R)) > 1e-14)
+    if (abs(trace(OPL.back()*R)) > InvETol)
     {
         cerr<<"tr(OPL*R)="<<trace(OPL.back()*R)<<endl;
 //        throw std::domain_error("it seems E0 is not subtracted from H");
@@ -651,7 +632,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
     {
         OPR.emplace_front(ApplyOpTMRightDiag(O,*iter) + ApplyTMRight(*iter,OPR.front()) ); /// here, *iter is AR[n]
     }
-    if (abs(trace(L*OPR.front())) > 1e-14)
+    if (abs(trace(L*OPR.front())) > InvETol)
     {
         cerr<<"tr(L*OPR)="<<trace(L*OPR.front())<<endl;
 //        throw std::domain_error("it seems E0 is not subtracted from H");
@@ -659,7 +640,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
 
 /// TODO (valentin#1#): switch to iterators
 
-    EOPL.back() = InvertE_proj(AL,OPL.back(),eye<VTO>(R.GetMr()),R,l,tol,maxit,BlockDiagMat<KT,VTO>(),verbose);
+    EOPL.back() = InvertE_proj(AL,OPL.back(),eye<VTO>(R.GetMr()),R,l,InvETol,maxit,BlockDiagMat<KT,VTO>(),verbose);
     OPLtot.back() = EOPL.back();
 
     for (uint n=0;n<N-1;++n)
@@ -668,7 +649,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
         OPLtot[n] = OPL[n] + EOPL[n];
     }
 
-    EOPR.front() = InvertE_proj(AR,OPR.front(),L,eye<VTO>(L.GetMr()),r,tol,maxit,BlockDiagMat<KT,VTO>(),verbose);
+    EOPR.front() = InvertE_proj(AR,OPR.front(),L,eye<VTO>(L.GetMr()),r,InvETol,maxit,BlockDiagMat<KT,VTO>(),verbose);
     OPRtot.front() = EOPR.front();
 
     for (uint n=N-1;n>0;--n)
@@ -678,7 +659,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
     }
 
 /// iterator part
-//    EHL.emplace_back(InvertE_proj(AL,HL.back(),eye<VTO>(C.back().GetMr()),R,l,tol));
+//    EHL.emplace_back(InvertE_proj(AL,HL.back(),eye<VTO>(C.back().GetMr()),R,l,InvETol));
 //    cout<<trace(EHL.back()*R)<<endl;
 //
 //    HLtot.emplace_back(EHL.back());
@@ -696,7 +677,7 @@ OPeffConstants(BlockDiagMatArray<KT,VTO>& OPLtot,
 //    shift(HLtot,-1);
 //
 //
-//    EHR.emplace_back(InvertE_proj(AR,HR.front(),L,eye<VTO>(C.back().GetMr()),r,tol));
+//    EHR.emplace_back(InvertE_proj(AR,HR.front(),L,eye<VTO>(C.back().GetMr()),r,InvETol));
 //    cout<<trace(L*EHR.back())<<endl;
 
 }
@@ -827,54 +808,59 @@ MeasureExcitations(const MPSBlockMatArray<KT,VT>& AL,
                    const BlockDiagMatArray<KT,VT>& L,
                    const BlockDiagMatArray<KT,VT>& R,
                    const std::vector<RSpOp>& obs,
-                   std::map<std::string,RVecType>& expval,
                    std::vector<dimkeypair_vec<IKey> >& xdims,
                    uint mtot,
                    Real p,
-                   Real tol=1e-14,
                    Real InvETol=1e-14,
                    bool verbose=false)
 {
     uint N = AL.size();
-//    auto PBC = [N](int x) -> int {return (x + N)%N;};
+    auto PBC = [N](int x) -> int {return (x + N)%N;};
 
     CVecType XVec(mtot,fill::randn);
     XVec/=norm(XVec);
 
-    BlockMatArray<IKey,Complex> Xin(XVec,xdims);
-    BlockMatArray<IKey,Complex> Xout(xdims,fill::zeros);
+    BlockMatArray<KT,Complex> Xin(XVec,xdims);
+    BlockMatArray<KT,Complex> Xout(xdims,fill::zeros);
 //    Xin = BlockMatArray<IKey,Complex>;
 
-    BlockDiagMatArray<IKey,Scalar> OPLtot, OPRtot;
+    BlockDiagMatArray<KT,Real> OPLtot, OPRtot;
     Complex kfac(cos(N*p*datum::pi),sin(N*p*datum::pi));
 
     CVecType vals(N);
-    Real meanexp;
     for (uint ct=0; ct<obs.size(); ++ct)
     {
-//        RSpOp tmpop = obs[n];
-//        tmpop -= eobs[tmpop.GetName()]*SpId<Real>(tmpop.GetLocalDim(),tmpop.GetNSites());
-
         cout<<"== "<<obs[ct].GetName()<<" "<<std::string(94,'=')<<endl;
+
+
+        cout<<"-- AL "<<std::string(94,'-')<<endl;
+        auto obsLv = MeasureObservables(obs[ct],AL,BlockDiagMatArray<KT,VTA>(),R,true);
+        cout<<"-- AR "<<std::string(94,'-')<<endl;
+        auto obsRv = MeasureObservables(obs[ct],AR,L,BlockDiagMatArray<KT,VTA>(),true);
+
         std::string tmpname = obs[ct].GetName();
-        meanexp = mean(expval[obs[ct].GetName()]);
-        cout<<"subtracting "<<meanexp<<endl;
+        auto eobs = 0.5*(mean(obsLv) + mean(obsRv));
+        cout<<"subtracting "<<eobs<<endl;
 
         Xout.Fill(0.);
 
-        SparseOperator<Real> OPtmp = obs[ct] - meanexp*SpId<Real>(obs[ct].GetLocalDim(),obs[ct].GetNSites());
-        OPeffConstants(OPLtot,OPRtot,AL,AR,L.back(),R.back(),OPtmp,tol,0,verbose);
+        SparseOperator<Real> OPtmp = obs[ct] - eobs*SpId<Real>(obs[ct].GetLocalDim(),obs[ct].GetNSites());
+//        SparseOperator<Real> OPtmp = obs[ct];
+        OPeffConstants(OPLtot,OPRtot,AL,AR,L.back(),R.back(),OPtmp,InvETol,0,verbose);
 
-        ApplyOPeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,OPtmp,OPLtot,OPRtot,std::max(tol/10,InvETol),verbose);
 //        OPLtot.print("OPLtot");
 //        OPRtot.print("OPRtot");
+        if (verbose)
+        {
+            for (uint n=0; n<N; ++n)
+            {
+                cout<<"n="<<n<<endl;
+                cout<<"trace(OPLtot[n]*R[n]): "<<trace(OPLtot[n]*R[n])<<endl;
+                cout<<"trace(L[PBC(n-1)]*OPRtot[n]): "<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
+            }
+        }
 
-//        for (uint n=0; n<N; ++n)
-//        {
-//            cout<<"n="<<n<<endl;
-//            cout<<trace(OPLtot[n]*R[n])<<endl;
-//            cout<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
-//        }
+        ApplyOPeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,OPtmp,OPLtot,OPRtot,InvETol,verbose);
 
         for (uint n=0;n<N;++n) vals(n) = trace(Xin[n].t()*Xout[n]);
         vals.print(tmpname);
@@ -968,6 +954,39 @@ teststuff(const MPSBlockMatArray<KT,VT>& ALvec,
 //    BlockMat<IKey,Scalar> tmpnd(ynd);
 //    for (uint n=0; n<N; ++n) tmpnd = ApplyTMmixedLeft(ALvec[n],ARvec[n],tmpnd);
 //    cout<<norm(ynd - 0.8*tmpnd - xnd)/norm(xnd)<<endl;
+}
+
+template<typename KT, typename VT>
+Real
+LRoverlaps(BlockMat<KT,VT>& LM,
+           BlockMat<KT,VT>& RM,
+           const MPSBlockMatArray<KT,VT>& ALvec,
+           const MPSBlockMatArray<KT,VT>& ARvec,
+           const KT& K,
+           uint nev,
+           Real OLtol=1e-14,
+           bool verbose=true)
+{
+    cout<<K<<endl;
+    ALvec.front().ShowDims("AL");
+    ARvec.front().ShowDims("AR");
+    std::vector<BlockMat<KT,Complex> > VL,VR;
+
+    CVecType OLLv = TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,BlockMat<KT,VT>(),0,verbose);
+    CVecType OLRv = TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,BlockMat<KT,VT>(),0,verbose);
+
+    LM = BlockMat<KT,VT>(VL.front());
+    RM = BlockMat<KT,VT>(VR.front());
+
+    if (abs(imag(OLLv(0))) > 10*OLtol) cerr<<"dominant left overlap between AL and AR is complex, OL = "<<OLLv(0)<<endl;
+    if (abs(imag(OLRv(0))) > 10*OLtol) cerr<<"dominant right overlap between AL and AR is complex, OR = "<<OLRv(0)<<endl;
+    Real OLL = real(OLLv(0));
+    Real OLR = real(OLRv(0));
+    Real dOL = OLL - OLR;
+    if (std::abs(dOL) > 10*OLtol) cerr<<"dominant left and right overlap between AL and AR differs by "<<dOL<<endl;
+
+        cout<<"sign(OLL)="<<sign(OLL)<<", sign(OLR)="<<sign(OLR)<<endl;
+    return 0.5*(OLR + OLL);
 }
 
 #endif // EXCITATIONS_HELPERS

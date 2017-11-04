@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 //    std::vector<Real> pvec;
     std::vector<std::string> obsnames;
     Real tol = 1e-10,InvETol=1e-14;
-    uint N=2, nev=4, np=1, UC_shift=0;
+    uint N=2, nev=4, np=1, rel_shift=0, glob_shift=0;
     Real pmin, pmax;
     bool verbose=false, saveE=false, saveX=false, test=false, proj=false;
 
@@ -51,7 +51,8 @@ int main(int argc, char** argv)
     pp.GetValue(datafolder,"datafolder");
     pp.GetValue(QN,"QN");
     pp.GetValue(exc_keyvec,"K",true);
-    pp.GetValue(UC_shift,"shift");
+    pp.GetValue(rel_shift,"shift");
+    pp.GetValue(glob_shift,"glob_shift");
     pp.GetValue(trans_op,"op");
     pp.GetValue(test,"test");
     pp.GetValue(obsnames,"obs");
@@ -77,7 +78,7 @@ int main(int argc, char** argv)
     std::stringstream sstr;
     string savefolder;
 
-    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<UC_shift;
+    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
     if (!trans_op.empty()) sstr<<"_op"<<trans_op;
     sstr<<"_K";
     sstr<<K;
@@ -106,12 +107,27 @@ int main(int argc, char** argv)
     /// unit cell size
     N = ALvec.size();
 
-//    pvec.emplace_back(pmin);
-//    Real dp = (np>1) ? (pmax - pmin)/double(np-1) : 0; /// if np=1, we don't need dp, and set it to 0
-//    for (uint k=1; k<np; ++k)pvec.emplace_back(pmin + k*dp); /// this is only executed if np>1
-//    auto PBC = [N](int x) -> int {return (x + N)%N;};
+    /// create I2K object and check its compliance with the loaded state
+    auto I2K = pmod->GetI2K(N,QN);
+
+    if (ALvec != I2K) throw std::runtime_error("AL not compatible with I2K from model");
+    if (ARvec != I2K) throw std::runtime_error("AR not compatible with I2K from model");
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
+
+    /// apply global shift to state
+    if (glob_shift > N)
+    {
+        glob_shift = glob_shift%N;
+        cerr<<endl<<"0 < glob_shift < N, setting to "<<glob_shift<<endl<<endl;
+    }
+    if (glob_shift > 0)
+    {
+        shift(ALvec,glob_shift);
+        shift(ARvec,glob_shift);
+        shift(Cvec,glob_shift);
+    }
+
     for (const auto& it : Cvec)
     {
         Lvec.emplace_back(it.t()*it);
@@ -119,54 +135,29 @@ int main(int argc, char** argv)
     }
 
 
-    /// create I2K object and check its compliance with the loaded state
-    auto I2K = pmod->GetI2K(N,QN);
-
-    if (ALvec != I2K) throw std::runtime_error("AL not compatible with I2K from model");
-    if (ARvec != I2K) throw std::runtime_error("AR not compatible with I2K from model");
-
-    if (UC_shift >= N)
-    {
-        UC_shift = UC_shift%N;
-        cerr<<endl<<"0 < shift < N, setting to "<<UC_shift<<endl<<endl;
-    }
-
+    /// apply transformations to AR if present
     if (!trans_op.empty()) ApplyTransformation(ARvec,Lvec,trans_op,I2K,pmod);
 
 
-    std::vector<BlockMat<IKey,Complex> > VL,VR;
-    BlockMat<IKey,Scalar> LM,RM;
-    CVecType OLLv,OLRv;
-//    Real OLL=1,OLR=1;
-    if (UC_shift > 0)
+    /// shift AR unit cell
+    if (rel_shift > N)
     {
-        shift(ARvec,UC_shift);
-        shift(Lvec,UC_shift);
+        rel_shift = rel_shift%N;
+        cerr<<endl<<"0 < rel_shift < N, setting to "<<rel_shift<<endl<<endl;
     }
-//        Cit += UC_shift;
-//    Real OLtol = std::max(tol/100,1e-15);
-    Real OLtol = 1e-14;
-    OLLv = TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
-    OLRv = TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
-
-    if (abs(imag(OLLv(0))) > 10*OLtol) cerr<<"dominant left overlap between AL and AR is complex, OL = "<<OLLv(0)<<endl;
-    if (abs(imag(OLRv(0))) > 10*OLtol) cerr<<"dominant right overlap between AL and AR is complex, OR = "<<OLRv(0)<<endl;
-    Real OLL = real(OLLv(0));
-    Real OLR = real(OLRv(0));
-    Real dOL = OLL - OLR;
-    if (std::abs(dOL) > 10*OLtol) cerr<<"dominant left and right overlap between AL and AR differs by "<<dOL<<endl;
-
-    /// fix overlap between AL and AR to be (real and) positive (actually, we probably don't want this)
-//    Real OL = 0.5*(OLR + OLL);
-//    ARvec.front() *= sign(OL);
-
-    LM = BlockMat<IKey,Scalar>(VL.front());
-    RM = BlockMat<IKey,Scalar>(VR.front());
+    if (rel_shift > 0)
+    {
+        shift(ARvec,rel_shift);
+        shift(Lvec,rel_shift);
+    }
 
     BlockDiagMat<IKey,Scalar> L(Lvec.back());
     BlockDiagMat<IKey,Scalar> R(Rvec.back());
 
-//    teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,real(OLLv(0)),real(OLRv(0)));
+    /// check overlaps between AL and AR and get left and right eigenmatrices of T^R_L (obtain the ones of T^L_R by hermitian conjugation)
+    BlockMat<IKey,Scalar> LM,RM;
+    LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
+
 
     /// calculate ground state energy density to subtract from Hamiltonian
     RVecType E0vL = MeasureObservables(H,ALvec,BlockDiagMatArray<IKey,Scalar>(),Rvec,true);
@@ -186,46 +177,40 @@ int main(int argc, char** argv)
     uint mtot = XDims(xdims,NLvec,ARvec,K);
     if (!all(xdims)) throw std::domain_error("no excitations for this quantum number");
 
-
-    if (test)
+    auto obs = pmod->GetObservables(obsnames);
+    if (!obs.empty())
     {
-        auto obs = pmod->GetObservables(obsnames);
+        Real p=0.5;
+        pp.GetValue(p,"p");
+//
+//        cout<<"-- AL "<<std::string(94,'-')<<endl;
+//        auto eobsL = MeasureObservables(obs,ALvec,IDiagArray(),Rvec,true);
+//        cout<<"-- AR "<<std::string(94,'-')<<endl;
+//        auto eobsR = MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
 
-        cout<<"I2K:"<<endl;
-        cout<<I2K<<endl;
-        Lamvec.ShowDims("lam");
-        if (!obs.empty())
-        {
-            Real p=0.5;
-            pp.GetValue(p,"p");
+        MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,xdims,mtot,p,std::max(tol/100,InvETol),verbose);
+        cout<<std::string(100,'=')<<endl;
+    }
 
-            cout<<"== AL "<<std::string(94,'=')<<endl;
-            auto eobsL = MeasureObservables(obs,ALvec,IDiagArray(),Rvec,true);
-            cout<<"== AR "<<std::string(94,'=')<<endl;
-            auto eobsR = MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
-
-            MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,eobsL,xdims,mtot,p,tol,InvETol,verbose);
-        }
-        cout<<"sign(OLL)="<<sign(OLLv(0))<<", sign(OLR)="<<sign(OLLv(0))<<endl;
-        OLL = std::abs(OLL);
-        OLR = std::abs(OLR);
-        TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
-        TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
-        cout<<std::string(100,'-')<<endl;
-
-        /// early bail out for testing
-        return 0;
+    /// early bail out for testing
+    if (test) return 0;
+//    {
+//        cout<<"I2K:"<<endl;
+//        cout<<I2K<<endl;
+//        Lamvec.ShowDims("lam");
+//        TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
+//        TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
 //        teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,OLL,OLR);
-
 //        cout<<"folder: "<<savefolder<<endl;
 //        cout<<"name: "<<fileparts(saveEname).name<<endl;
-    }
+//        return 0;
+//    }
 
 
 
     /// calculate B independent constants for applying effective Hamiltonian
     IDiagArray HLtot,HRtot;
-    HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,max(tol/100,InvETol),0,verbose);
+    HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,std::max(tol/100,InvETol),0,verbose);
 
     /// actually calculate excitations
     RMatType dE(np,nev,fill::zeros);
@@ -244,7 +229,7 @@ int main(int argc, char** argv)
         std::function<void (Complex*,Complex*)> Hfun =
         [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LM,&RM,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
         {
-            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/10,InvETol),verbose);
+            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol/100,InvETol),verbose);
         };
 
         tts.tic();
