@@ -242,9 +242,13 @@ int main(int argc, char** argv)
 
         tts.tic();
         eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
-        cout<<"p = "<<pvec(n)<<" "<<N<<" pi done ("<<tts.toc()<<" s.)"<<endl;
+
         if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
         dE.row(n) = real(dEtmp);
+
+        cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
+        for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
+        cout<<"("<<tts.toc()<<" s.)"<<endl;
 
         if (saveX)
         {
@@ -259,12 +263,12 @@ int main(int argc, char** argv)
     }
     double tel=tt.toc();
 
-    for (uint n=0; n<np; ++n)
-    {
-        cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
-        for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
-        cout<<endl;
-    }
+//    for (uint n=0; n<np; ++n)
+//    {
+//        cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
+//        for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
+//        cout<<endl;
+//    }
 
     if (saveE)
     {
