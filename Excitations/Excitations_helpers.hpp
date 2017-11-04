@@ -815,7 +815,7 @@ MeasureExcitations(const MPSBlockMatArray<KT,VT>& AL,
                    bool verbose=false)
 {
     uint N = AL.size();
-    auto PBC = [N](int x) -> int {return (x + N)%N;};
+//    auto PBC = [N](int x) -> int {return (x + N)%N;};
 
     CVecType XVec(mtot,fill::randn);
     XVec/=norm(XVec);
@@ -832,7 +832,6 @@ MeasureExcitations(const MPSBlockMatArray<KT,VT>& AL,
     {
         cout<<"== "<<obs[ct].GetName()<<" "<<std::string(94,'=')<<endl;
 
-
         cout<<"-- AL "<<std::string(94,'-')<<endl;
         auto obsLv = MeasureObservables(obs[ct],AL,BlockDiagMatArray<KT,VTA>(),R,true);
         cout<<"-- AR "<<std::string(94,'-')<<endl;
@@ -848,23 +847,25 @@ MeasureExcitations(const MPSBlockMatArray<KT,VT>& AL,
 //        SparseOperator<Real> OPtmp = obs[ct];
         OPeffConstants(OPLtot,OPRtot,AL,AR,L.back(),R.back(),OPtmp,InvETol,0,verbose);
 
-//        OPLtot.print("OPLtot");
-//        OPRtot.print("OPRtot");
-        if (verbose)
-        {
-            for (uint n=0; n<N; ++n)
-            {
-                cout<<"n="<<n<<endl;
-                cout<<"trace(OPLtot[n]*R[n]): "<<trace(OPLtot[n]*R[n])<<endl;
-                cout<<"trace(L[PBC(n-1)]*OPRtot[n]): "<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
-            }
-        }
+//        CVecType local_vals(N);
+
+//        for (uint n=0; n<N; ++n)
+//        {
+//            auto Btmp = NL[n]*Xin[n];
+//            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,Btmp));
+//            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,NL[n]));
+//                cout<<"n="<<n<<endl;
+//                cout<<"trace(OPLtot[n]*R[n]): "<<trace(OPLtot[n]*R[n])<<endl;
+//                cout<<"trace(L[PBC(n-1)]*OPRtot[n]): "<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
+//        }
 
         ApplyOPeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,OPtmp,OPLtot,OPRtot,InvETol,verbose);
 
         for (uint n=0;n<N;++n) vals(n) = trace(Xin[n].t()*Xout[n]);
         vals.print(tmpname);
         cout<<"total: "<<sum(vals)<<endl;
+//        local_vals.print("local");
+//        cout<<"total: "<<mean(local_vals)<<endl;
 
     }
 }
@@ -988,5 +989,147 @@ LRoverlaps(BlockMat<KT,VT>& LM,
         cout<<"sign(OLL)="<<sign(OLL)<<", sign(OLR)="<<sign(OLR)<<endl;
     return 0.5*(OLR + OLL);
 }
+
+template<typename KT, typename VT>
+bool
+saveALRN(const BlockDiagMatArray<KT,VT>& Cvec,
+         const BlockDiagMatArray<KT,VT>& Lvec,
+         const BlockDiagMatArray<KT,VT>& Rvec,
+         const MPSBlockMatArray<KT,VT>& ALvec,
+         const MPSBlockMatArray<KT,VT>& ARvec,
+         const MPSBlockMatArray<KT,VT>& NLvec,
+         std::ofstream& file)
+{
+    if (!Cvec.save(file))
+    {
+        cerr<<"failed to save C"<<endl;
+        return false;
+    }
+    if (!Lvec.save(file))
+    {
+        cerr<<"failed to save L"<<endl;
+        return false;
+    }
+    if (!Rvec.save(file))
+    {
+        cerr<<"failed to save R"<<endl;
+        return false;
+    }
+    if (!ALvec.save(file))
+    {
+        cerr<<"failed to save AL"<<endl;
+        return false;
+    }
+    if (!ARvec.save(file))
+    {
+        cerr<<"failed to save AR"<<endl;
+        return false;
+    }
+    if (!NLvec.save(file))
+    {
+        cerr<<"failed to save AR"<<endl;
+        return false;
+    }
+    return true;
+}
+
+template<typename KT, typename VT>
+bool
+saveALRN(const BlockDiagMatArray<KT,VT>& Cvec,
+         const BlockDiagMatArray<KT,VT>& Lvec,
+         const BlockDiagMatArray<KT,VT>& Rvec,
+         const MPSBlockMatArray<KT,VT>& ALvec,
+         const MPSBlockMatArray<KT,VT>& ARvec,
+         const MPSBlockMatArray<KT,VT>& NLvec,
+         std::string name,
+         std::string ending="bin")
+{
+    auto tmpname = GetUniqueFileName(name,ending);
+
+    /// open and save to file
+    std::ofstream file(tmpname, std::fstream::binary);
+
+    bool success = saveALRN(Cvec,Lvec,Rvec,ALvec,ARvec,NLvec,file);
+    file.close();
+
+//    if (success) cout<<"saved ALRN to "<<tmpname<<endl;
+//    else cout<<"failed to save ALRN to "<<tmpname<<endl;
+    return success;
+}
+
+
+template<typename KT, typename VT, typename GO>
+bool
+loadALRN(BlockDiagMatArray<KT,VT>& Cvec,
+         BlockDiagMatArray<KT,VT>& Lvec,
+         BlockDiagMatArray<KT,VT>& Rvec,
+         MPSBlockMatArray<KT,VT>& ALvec,
+         MPSBlockMatArray<KT,VT>& ARvec,
+         MPSBlockMatArray<KT,VT>& NLvec,
+         const GO& GroupObj,
+         std::ifstream& file)
+{
+    if (!Cvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load C"<<endl;
+        return false;
+    }
+    if (!Lvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load L"<<endl;
+        return false;
+    }
+    if (!Rvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load R"<<endl;
+        return false;
+    }
+    if (!ALvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load AL"<<endl;
+        return false;
+    }
+    if (!ARvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load AR"<<endl;
+        return false;
+    }
+    if (!NLvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load NL"<<endl;
+        return false;
+    }
+    return true;
+}
+
+
+template<typename KT, typename VT, typename GO>
+bool
+loadALRN(BlockDiagMatArray<KT,VT>& Cvec,
+         BlockDiagMatArray<KT,VT>& Lvec,
+         BlockDiagMatArray<KT,VT>& Rvec,
+         MPSBlockMatArray<KT,VT>& ALvec,
+         MPSBlockMatArray<KT,VT>& ARvec,
+         MPSBlockMatArray<KT,VT>& NLvec,
+         const GO& GroupObj,
+         std::string filename)
+{
+    if (!RegFileExist(filename))
+    {
+        cerr<<"file "<<filename<<" not found"<<endl;
+        return false;
+    }
+
+    std::ifstream file(filename,std::ifstream::binary);
+
+    bool success = loadALRN(Cvec,Lvec,Rvec,ALvec,ARvec,NLvec,GroupObj,file);
+    file.close();
+
+//    if (success) cout<<"loaded "<<filename<<endl;
+//    else cout<<"failed to load "<<filename<<endl;
+
+    return success;
+}
+
 
 #endif // EXCITATIONS_HELPERS
