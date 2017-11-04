@@ -1212,45 +1212,56 @@ operator!=(const MPSBlockMatArray<KT,VT>& A, const ItoKey<N,KT>& I2K)
 /**< SAVING AND LOADING IMPS */
 template<typename KT, typename VT>
 bool
-saveIMPS(const BlockLamArray<KT>& Lamvec, const BlockDiagMatArray<KT,VT>& Cvec, const MPSBlockMatArray<KT,VT>& ALvec, const MPSBlockMatArray<KT,VT>& ARvec, std::string name, std::string ending="bin", std::string folder=".")
+saveIMPS(const BlockLamArray<KT>& Lamvec,
+         const BlockDiagMatArray<KT,VT>& Cvec,
+         const MPSBlockMatArray<KT,VT>& ALvec,
+         const MPSBlockMatArray<KT,VT>& ARvec,
+         std::ofstream& file)
 {
-    bool success = true;
+    /// do this outside!!
 
-    /// check for file existence and append number if necessary
-    auto tmpname = GetUniqueFileName(name,ending,folder);
+    if (!Lamvec.save(file))
+    {
+        cerr<<"failed to save LAM"<<endl;
+        return false;
+    }
+    if (!Cvec.save(file))
+    {
+        cerr<<"failed to save C"<<endl;
+        return false;
+    }
+    if (!ALvec.save(file))
+    {
+        cerr<<"failed to save AL"<<endl;
+        return false;
+    }
+    if (!ARvec.save(file))
+    {
+        cerr<<"failed to save AR"<<endl;
+        return false;
+    }
+    return true;
+}
+
+template<typename KT, typename VT>
+bool
+saveIMPS(const BlockLamArray<KT>& Lamvec,
+         const BlockDiagMatArray<KT,VT>& Cvec,
+         const MPSBlockMatArray<KT,VT>& ALvec,
+         const MPSBlockMatArray<KT,VT>& ARvec,
+         std::string name,
+         std::string ending="bin")
+{
+    auto tmpname = GetUniqueFileName(name,ending);
 
     /// open and save to file
     std::ofstream file(tmpname, std::fstream::binary);
 
-    success = success && Lamvec.save(file);
-    if (!success)
-    {
-        cerr<<"failed to save LAM"<<endl;
-        file.close();
-        return false;
-    }
-    success = success && Cvec.save(file);
-    if (!success)
-    {
-        cerr<<"failed to save C"<<endl;
-        file.close();
-        return false;
-    }
-    success = success && ALvec.save(file);
-    if (!success)
-    {
-        cerr<<"failed to save AL"<<endl;
-        file.close();
-        return false;
-    }
-    success = success && ARvec.save(file);
-    if (!success)
-    {
-        cerr<<"failed to save AR"<<endl;
-        file.close();
-        return false;
-    }
-    cout<<"saved UMPS to "<<tmpname<<endl;
+    bool success = saveIMPS(Lamvec,Cvec,ALvec,ARvec,file);
+    file.close();
+
+    if (success) cout<<"saved UMPS to "<<tmpname<<endl;
+    else cout<<"failed to save UMPS to "<<tmpname<<endl;
     return success;
 }
 
@@ -1260,11 +1271,43 @@ loadIMPS(BlockLamArray<KT>& Lamvec,
          BlockDiagMatArray<KT,VT>& Cvec,
          MPSBlockMatArray<KT,VT>& ALvec,
          MPSBlockMatArray<KT,VT>& ARvec,
-         std::string filename,
          const GO& GroupObj,
-         bool verbose=false)
+         std::ifstream& file)
 {
-    bool success = true;
+    if (!Lamvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load LAM"<<endl;
+        return false;
+    }
+    if (!Cvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load C"<<endl;
+        return false;
+    }
+    if (!ALvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load AL"<<endl;
+        return false;
+    }
+    if (!ARvec.load(file,GroupObj))
+    {
+        cerr<<"failed to load AR"<<endl;
+        return false;
+    }
+
+    return true;
+}
+
+
+template<typename KT, typename VT, typename GO>
+bool
+loadIMPS(BlockLamArray<KT>& Lamvec,
+         BlockDiagMatArray<KT,VT>& Cvec,
+         MPSBlockMatArray<KT,VT>& ALvec,
+         MPSBlockMatArray<KT,VT>& ARvec,
+         const GO& GroupObj,
+         std::string filename)
+{
     if (!RegFileExist(filename))
     {
         cerr<<"file "<<filename<<" not found"<<endl;
@@ -1272,33 +1315,13 @@ loadIMPS(BlockLamArray<KT>& Lamvec,
     }
 
     std::ifstream file(filename,std::ifstream::binary);
-    success = success && Lamvec.load(file,GroupObj);
-    if (!success)
-    {
-        cerr<<"failed to load LAM"<<endl;
-        return false;
-    }
-    success = success && Cvec.load(file,GroupObj);
-    if (!success)
-    {
-        cerr<<"failed to load C"<<endl;
-        return false;
-    }
-    success = success && ALvec.load(file,GroupObj);
-    if (!success)
-    {
-        cerr<<"failed to load AL"<<endl;
-        return false;
-    }
-    success = success && ARvec.load(file,GroupObj);
-    if (!success)
-    {
-        cerr<<"failed to load AR"<<endl;
-        return false;
-    }
 
-    if (verbose) cout<<"loaded "<<filename<<endl;
+    bool success = loadIMPS(Lamvec,Cvec,ALvec,ARvec,GroupObj,file);
     file.close();
+
+    if (success) cout<<"loaded "<<filename<<endl;
+    else cout<<"failed to load "<<filename<<endl;
+
     return success;
 }
 
