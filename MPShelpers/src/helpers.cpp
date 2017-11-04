@@ -135,7 +135,7 @@ GetUniquePath(const std::string& path)
 {
     std::string tmpname(path);
     unsigned int ct=1;
-    while (FileExist(tmpname)) tmpname = path+"_"+std::to_string(ct++);
+    while (FileExist(tmpname)) tmpname = path+"_v"+std::to_string(ct++);
     return tmpname;
 }
 
@@ -156,6 +156,6 @@ GetUniqueFileName(const std::string& filename, const std::string& ending, const 
 //    std::string tmpname = folder+"/"+filename+"."+ending;
     std::string tmpname = Fullpath(filename,ending,folder);
     unsigned int ct=1;
-    while (RegFileExist(tmpname)) tmpname = folder+"/"+filename+"_"+std::to_string(ct++)+"."+ending;
+    while (RegFileExist(tmpname)) tmpname = folder+"/"+filename+"_v"+std::to_string(ct++)+"."+ending;
     return tmpname;
 }
