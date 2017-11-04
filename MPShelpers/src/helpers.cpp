@@ -139,6 +139,17 @@ GetUniquePath(const std::string& path)
     return tmpname;
 }
 
+//std::string
+//GetUniqueFileName(const std::string& filepath)
+//{
+//    fileparts fp(filepath);
+//    std::string tmpname = Fullpath(filename,ending,folder);
+//    unsigned int ct=1;
+//    while (RegFileExist(tmpname)) tmpname = folder+"/"+filename+"_"+std::to_string(ct++)+"."+ending;
+//    return tmpname;
+//}
+
+
 std::string
 GetUniqueFileName(const std::string& filename, const std::string& ending, const std::string& folder)
 {
