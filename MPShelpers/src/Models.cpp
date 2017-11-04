@@ -941,9 +941,9 @@ const modptr CreateModel(const parser& P, bool verbose)
         uvals.resize(1);
         rvals.resize(3);
         /// default values
-        uvals(0)=2;
-        rvals(0)=1;
-        rvals(2)=0;
+        uvals(0)=2; /// d
+        rvals(0)=1; /// J
+        rvals(2)=0; /// hz
         try
         {
             P.GetValue(uvals(0),"d");
