@@ -155,9 +155,9 @@ int main(int argc, char** argv)
     Real OLR = real(OLRv(0));
     Real dOL = OLL - OLR;
     if (std::abs(dOL) > 10*OLtol) cerr<<"dominant left and right overlap between AL and AR differs by "<<dOL<<endl;
-    Real OL = 0.5*(OLR + OLL);
 
     /// fix overlap between AL and AR to be (real and) positive (actually, we probably don't want this)
+//    Real OL = 0.5*(OLR + OLL);
 //    ARvec.front() *= sign(OL);
 
     LM = BlockMat<IKey,Scalar>(VL.front());

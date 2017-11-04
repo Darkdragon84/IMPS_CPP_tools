@@ -425,7 +425,7 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
 
-    uint d = OP.GetLocalDim();
+//    uint d = OP.GetLocalDim();
     Complex ckfac = std::conj(kfac);
 
     auto PBC = [N](int x) -> int {return (x + N)%N;};
