@@ -968,9 +968,9 @@ LRoverlaps(BlockMat<KT,VT>& LM,
            Real OLtol=1e-14,
            bool verbose=true)
 {
-    cout<<K<<endl;
-    ALvec.front().ShowDims("AL");
-    ARvec.front().ShowDims("AR");
+//    cout<<K<<endl;
+//    ALvec.front().ShowDims("AL");
+//    ARvec.front().ShowDims("AR");
     std::vector<BlockMat<KT,Complex> > VL,VR;
 
     CVecType OLLv = TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,BlockMat<KT,VT>(),0,verbose);
