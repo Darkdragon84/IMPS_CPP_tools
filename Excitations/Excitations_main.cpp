@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 {
     arma_rng::set_seed_random();
     std::string filename,mode="SR",datafolder=".",trans_op="";
-    std::vector<int> exc_keyvec, QN;
+    std::vector<int> Kvec, QNvec;
 //    std::vector<Real> pvec;
     std::vector<std::string> obsnames;
     Real tol = 1e-10,InvETol=1e-14;
@@ -49,8 +49,8 @@ int main(int argc, char** argv)
 
     pp.GetValue(filename,"state",true);
     pp.GetValue(datafolder,"datafolder");
-    pp.GetValue(QN,"QN");
-    pp.GetValue(exc_keyvec,"K",true);
+    pp.GetValue(QNvec,"QN",true);
+    pp.GetValue(Kvec,"K",true);
     pp.GetValue(rel_shift,"shift");
     pp.GetValue(glob_shift,"glob_shift");
     pp.GetValue(trans_op,"op");
@@ -72,11 +72,24 @@ int main(int argc, char** argv)
     auto H = pmod->GetLocalHam();
     uint nsym = pmod->GetNSym();
 
-    if (exc_keyvec.size()!=nsym) throw std::domain_error("K has wrong number of quantum numbers");
-    IKey K(pmod->GetGroupObj(),exc_keyvec);
+    if (Kvec.size()!=nsym) throw std::domain_error("K has wrong number of quantum numbers");
+    IKey K(pmod->GetGroupObj(),Kvec);
+    IKey QN(pmod->GetGroupObj(),QNvec);
 
-    /// momentum values
-    RVecType pvec = linspace(pmin, pmax, np);
+    /// create model and simulation parameter strings and output simulation info
+    std::stringstream sstr;
+    string savefolder;
+
+    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
+    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
+    sstr<<"_K";
+    sstr<<K;
+    cout<<"simulation summary: "<<sstr.str()<<"_tol"<<tol<<"_InvETol"<<InvETol<<endl;
+
+//    /// output simulation info
+//    cout<<"Excitations for "<<np<<" momenta "<<pmin<<"<p<"<<pmax<<" and "<<nev<<" bands"<<endl;
+//    cout<<"global shift="<<glob_shift<<", relative shift (AR)="<<rel_shift<<endl;
+//    cout<<"quantum number of ground state:"<<QN<<", excitation:"<<K<<endl;
 
     /// load IMPS state
     ILamArray Lamvec;
@@ -89,15 +102,18 @@ int main(int argc, char** argv)
     /// unit cell size
     N = ALvec.size();
 
+    /// momentum values
+    RVecType pvec = linspace(pmin, pmax, np);
+
+
     /// create I2K object and check its compliance with the loaded state
-    auto I2K = pmod->GetI2K(N,QN);
+    auto I2K = pmod->GetI2K(N,QNvec);
 
     if (ALvec != I2K) throw std::runtime_error("AL not compatible with I2K from model");
     if (ARvec != I2K) throw std::runtime_error("AR not compatible with I2K from model");
 
+
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
-
-
 
     /// apply global shift to state
     if (glob_shift > N)
@@ -140,6 +156,7 @@ int main(int argc, char** argv)
 
     /// check overlaps between AL and AR and get left and right eigenmatrices of T^R_L (obtain the ones of T^L_R by hermitian conjugation)
     BlockMat<IKey,Scalar> LM,RM;
+    cout<<"mixed TM AL and AR"<<endl;
     LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
 
 
@@ -195,13 +212,6 @@ int main(int argc, char** argv)
 
 
     /// prepare output filenames/folders etc.
-    std::stringstream sstr;
-    string savefolder;
-
-    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
-    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
-    sstr<<"_K";
-    sstr<<K;
 
     if (saveE || saveX)
     {
