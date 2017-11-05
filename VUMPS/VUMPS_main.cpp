@@ -438,7 +438,7 @@ int main(int argc, char** argv)
 
         if (savestate)
         {
-            if (!saveIMPS(Lamvec,Cvec,ALvec,ARvec,"UMPS_"+filename,"bin",savefolder)) cerr<<"failed to save UMPS"<<endl;
+            if (!saveIMPS(Lamvec,Cvec,ALvec,ARvec,savefolder+"/UMPS_"+filename)) cerr<<"failed to save UMPS"<<endl;
         }
 
 
