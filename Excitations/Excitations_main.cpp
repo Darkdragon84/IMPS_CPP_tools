@@ -144,7 +144,10 @@ int main(int argc, char** argv)
 
 
     /// calculate ground state energy density to subtract from Hamiltonian
+    cout<<"== H "<<std::string(94,'=')<<endl;
+    cout<<"-- AL "<<std::string(94,'-')<<endl;
     RVecType E0vL = MeasureObservables(H,ALvec,BlockDiagMatArray<IKey,Scalar>(),Rvec,true);
+    cout<<"-- AR "<<std::string(94,'-')<<endl;
     RVecType E0vR = MeasureObservables(H,ARvec,Lvec,BlockDiagMatArray<IKey,Scalar>(),true);
     double E0L = mean(E0vL);
     double E0R = mean(E0vR);
