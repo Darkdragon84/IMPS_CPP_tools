@@ -26,7 +26,7 @@ void parser::parse_argument(const string& arg)
     bool use = arg.substr(0,2)=="--" && epos!=string::npos && epos>2; // check if argument starts with --, if there is a = and if there at least one character between -- and =
 
     if (use) values_[arg.substr(2,epos-2)]=arg.substr(epos+1,arg.length()); // if suitable, use stuff between -- and = as key and everything after as target
-    else cout<<"ignoring argument "<<arg<<endl;
+//    else cout<<"ignoring argument "<<arg<<endl;
 }
 
 void parser::parse_from_file(const string& filename)
