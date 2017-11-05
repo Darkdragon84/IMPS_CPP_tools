@@ -23,6 +23,8 @@ using std::endl;
 using std::make_shared;
 
 /// TODO (valentin#1#2016-10-31): find out why I implemented an Init() method rather than just doing all this in the ctor
+/// TODO (valentin#1#2017-11-05): implement general model with user defined Hamiltonian, symmetries, etc.
+/// TODO (valentin#1#2017-11-05): implement user defined observables
 
 class ModelBase
 {
