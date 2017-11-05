@@ -1243,6 +1243,7 @@ saveIMPS(const BlockLamArray<KT>& Lamvec,
     return true;
 }
 
+/// TODO (valentin#1#2017-11-05): unify handling of filepaths
 template<typename KT, typename VT>
 bool
 saveIMPS(const BlockLamArray<KT>& Lamvec,
