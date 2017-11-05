@@ -441,7 +441,6 @@ int main(int argc, char** argv)
             if (!saveIMPS(Lamvec,Cvec,ALvec,ARvec,savefolder+"/UMPS_"+filename)) cerr<<"failed to save UMPS"<<endl;
         }
 
-
         if (plotnorm)
         {
             RVecType Fout(Fv);
