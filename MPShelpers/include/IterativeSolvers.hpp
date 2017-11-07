@@ -35,7 +35,8 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
     Col<T> r0 = b - Afun(x0);
     x = x0;
     Col<T> r(r0), w;
-    Real bnorm = norm(b), rnorm = norm(r), thresh=2e-16;
+//    Real bnorm = norm(b);
+    Real rnorm = norm(r), thresh=2e-16;
     T beta,htmp1,htmp2,phase,habs;
 
     /// do NOT initialize to zero!! Not necessary and uses huge amounts of memory and CPU time!
