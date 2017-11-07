@@ -98,25 +98,13 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
 
     /// combined AB overlap contribs of both within and right of current UC (checked)
     ABRtot.emplace_front(kfac*EBR);
-//    ABRtot.emplace_front(kfac*(*pEBR));
-//    ABRtot.emplace_front(kfac*EBR.front());
+
+    for (uint n=N-1; n>0; --n)
     {
-        auto ALit = AL.crbegin();
-        auto ARit = AR.crbegin();
-        auto ABRit = ABR.crbegin();
-        auto Aend = AL.crend()-1;
-        for ( ; ALit!=Aend; ++ALit,++ARit,++ABRit)
-        {
-            EBR = ApplyTMmixedRight(*ALit,*ARit,EBR);
-            ABRtot.emplace_front(*ABRit + kfac*EBR);
-//            (*pEBR) = ApplyTMmixedRight(*ALit,*ARit,(*pEBR));
-//            ABRtot.emplace_front(*ABRit + kfac*(*pEBR));
-//            EBR.emplace_front(ApplyTMmixedRight(*ALit,*ARit,EBR.front()));
-//            ABRtot.emplace_front(*ABRit + kfac*EBR.front());
-        }
+        EBR = ApplyTMmixedRight(AL[n],AR[n],EBR);
+        ABRtot.emplace_front(ABR[n] + kfac*EBR);
     }
     shift(ABRtot,1);/// bring last element to the front
-
 
     /// constants for terms where Bin is left of Bout (checked)
     /// these are all terms where H is left of or on Bin
