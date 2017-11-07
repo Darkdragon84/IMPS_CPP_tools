@@ -38,15 +38,21 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /// MAKE SURE XOUT IS INITIALIZED TO ZERO AND CONTAINS THE CORRECT SYMMETRY SECTORS
     /// CHECK OUTSIDE IF ALL ARRAYS HAVE THEIR PROPER LENGTHS
 
-/// TODO (valentin#1#): further optimize the generation of ABR, EBR, HBL, EHBL and see if we can generate the respective versions per site on the fly
 /// TODO (valentin#1#): Add functionality to recycle EBR and EHBL from last iteration. Possible solution: pass along pointers to these objects from the heap and have them allocated at the beginning before calling eigs
+
+    /// if we pass LM and RM, which are the left and right dominant eigenmatrices of the mixed transfer operators T^L_R and T^R_L between AL and AR,
+    /// then it is understood that we want to project out the dominant subspace (for which we need them)
+    /// If they are not passed (empty) we fully invert T^L_R and T^R_L
     bool proj = (!LM.empty() && !RM.empty());
 //    if (proj) cout<<"projecting"<<endl;
 
     uint N = Xin.size();
+
+    #ifndef NDEBUG
     assert(Xout.size() == N);
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
     for (uint n=0;n<N;++n) assert(Xin[n].GetSizesVector() == Xout[n].GetSizesVector());
+    #endif // NDEBUG
 
     uint d = H.GetLocalDim();
     Complex ckfac = std::conj(kfac);
@@ -54,10 +60,8 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     auto PBC = [N](int x) -> int {return (x + N)%N;};
 
     MPSBlockMatArray<KT,VTX> Bin,Bout;
-    BlockMatArray<KT,VTX> ABR,HBL,ABRtot;
-//    BlockMatArray<KT,VTX> ABR2(N),HBL2(N),ABRtot2(N);
+    BlockMatArray<KT,VTX> ABR,HBL,ABRtot,HBLtot;
     BlockMat<KT,VTX> EHBL,EBR;
-//    BlockMatArray<KT,VTX> EBR;
 
     /// create B mats from current X vector (Xin)
     for (uint n=0;n<N;++n) Bin.emplace_back(NL[n]*Xin[n]);
@@ -150,6 +154,15 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
 //        EHBL = *pEHBL;
 //    }
 
+    HBLtot.emplace_back(ckfac*EHBL);
+
+    for (uint n=0;n<N-1;++n)
+    {
+        EHBL = ApplyTMmixedLeft(AR[n],AL[n],EHBL);
+        HBLtot.emplace_back(HBL[n] + ckfac*EHBL);
+    }
+    shift(HBLtot,-1);/// bring first element to the back
+
     /************************************************************************************************/
     /** terms where Bin and Bout are on top of each other (checked)                                **/
     /************************************************************************************************/
@@ -180,7 +193,8 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /************************************************************************************************/
 
     /// n=0 has only contribs from next left UC (checked)
-    Bout.front() += ckfac*EHBL*AR.front();
+//    Bout.front() += ckfac*EHBL*AR.front();
+    Bout.front() += HBLtot.back()*AR.front();
 //    Bout.front() += ckfac*(*pEHBL)*AR.front();
 
     auto HBA = ApplyOperator(Bin.back()*AR.front(),H);
@@ -196,8 +210,10 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /// n>0 also has contribs from within same UC (checked)
     for (uint n=1; n<N; ++n)
     {
-        EHBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EHBL);
-        Bout[n] += (HBL[n-1] + ckfac*EHBL)*AR[n];
+//        EHBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EHBL);
+//        Bout[n] += (HBL[n-1] + ckfac*EHBL)*AR[n];
+
+        Bout[n] += HBLtot[n-1]*AR[n];
 //        (*pEHBL) = ApplyTMmixedLeft(AR[n-1],AL[n-1],*pEHBL);
 //        Bout[n] += (HBL[n-1] + ckfac*(*pEHBL))*AR[n];
 
