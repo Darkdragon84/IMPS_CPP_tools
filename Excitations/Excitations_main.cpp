@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     pp.GetValue(pmax,"pmax",true);
     pp.GetValue(np,"np",true);
 
-    int frmt = std::ceil(-std::log10(tol));
+    int frmt = std::ceil(-std::log10(tol))+1;
     InvETol = std::max(tol/10.,InvETol);
 
     cout.precision(frmt);
