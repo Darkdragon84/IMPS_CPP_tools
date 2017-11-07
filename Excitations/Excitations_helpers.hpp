@@ -77,6 +77,7 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     }
 
     /// contributions from all other UC to the right (checked)
+    if (verbose)cout<<"EBR:"<<endl;
     if (proj) EBR = InvertE_proj_fac(AL,AR,ABR.front(),LM,RM,r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
     else EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
 //    if (pEBR == nullptr)
@@ -134,6 +135,7 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     }
 
     /// contribs from all other UC to the left (checked)
+    if (verbose)cout<<"EHBL:"<<endl;
     if (proj) EHBL = InvertE_proj_fac(AR,AL,HBL.back(),LM.t(),RM.t(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
     else EHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
 
@@ -847,25 +849,27 @@ MeasureExcitations(const MPSBlockMatArray<KT,VT>& AL,
 //        SparseOperator<Real> OPtmp = obs[ct];
         OPeffConstants(OPLtot,OPRtot,AL,AR,L.back(),R.back(),OPtmp,InvETol,0,verbose);
 
-//        CVecType local_vals(N);
-
-//        for (uint n=0; n<N; ++n)
-//        {
-//            auto Btmp = NL[n]*Xin[n];
-//            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,Btmp));
-//            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,NL[n]));
-//                cout<<"n="<<n<<endl;
-//                cout<<"trace(OPLtot[n]*R[n]): "<<trace(OPLtot[n]*R[n])<<endl;
-//                cout<<"trace(L[PBC(n-1)]*OPRtot[n]): "<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
-//        }
 
         ApplyOPeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,OPtmp,OPLtot,OPRtot,InvETol,verbose);
 
         for (uint n=0;n<N;++n) vals(n) = trace(Xin[n].t()*Xout[n]);
         vals.print(tmpname);
         cout<<"total: "<<sum(vals)<<endl;
+
+//        CVecType local_vals(N);
+//        for (uint n=0; n<N; ++n)
+//        {
+//            auto Btmp = NL[n]*Xin[n];
+//            cout<<trace(ApplyTMLeft(Btmp))<<endl;
+//            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,Btmp))/trace(ApplyTMLeft(Btmp));
+////            local_vals(n) = trace(ApplyOpTMLeftGen(OPtmp,NL[n]));
+////                cout<<"n="<<n<<endl;
+////                cout<<"trace(OPLtot[n]*R[n]): "<<trace(OPLtot[n]*R[n])<<endl;
+////                cout<<"trace(L[PBC(n-1)]*OPRtot[n]): "<<trace(L[PBC(n-1)]*OPRtot[n])<<endl;
+//        }
 //        local_vals.print("local");
-//        cout<<"total: "<<mean(local_vals)<<endl;
+//        cout<<"total: "<<sum(local_vals)<<endl;
+//        cout<<"mean: "<<mean(local_vals)<<endl;
 
     }
 }
