@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     Real tol = 1e-10,InvETol=1e-14;
     uint N=2, nev=4, np=1, rel_shift=0, glob_shift=0;
     Real pmin, pmax;
-    bool verbose=false, saveE=false, saveX=false, test=false, proj=false;
+    bool verbose=false, saveE=false, saveX=false, test=false;
 
     uint coutprec = 12;
     cout.precision(coutprec);
@@ -43,7 +43,6 @@ int main(int argc, char** argv)
     pp.GetValue(InvETol,"InvETol");
     pp.GetValue(verbose,"verbose");
     pp.GetValue(nev,"nbands");
-    pp.GetValue(proj,"project",true);
     pp.GetValue(saveE,"saveE");
     pp.GetValue(saveX,"saveX");
 
@@ -75,6 +74,7 @@ int main(int argc, char** argv)
     uint nsym = pmod->GetNSym();
 
     if (Kvec.size()!=nsym) throw std::domain_error("K has wrong number of quantum numbers");
+    IKey K0(pmod->GetGroupObj()); /// zero quantum number, use later to check if we can fully invert mixed transfer ops
     IKey K(pmod->GetGroupObj(),Kvec);
     IKey QN(pmod->GetGroupObj(),QNvec);
 
@@ -161,7 +161,6 @@ int main(int argc, char** argv)
     cout<<"mixed TM AL and AR"<<endl;
     LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
 
-
     /// calculate ground state energy density to subtract from Hamiltonian
     cout<<"== H "<<std::string(94,'=')<<endl;
     cout<<"-- AL "<<std::string(94,'-')<<endl;
@@ -200,18 +199,6 @@ int main(int argc, char** argv)
 
     /// early bail out for testing
     if (test) return 0;
-//    {
-//        cout<<"I2K:"<<endl;
-//        cout<<I2K<<endl;
-//        Lamvec.ShowDims("lam");
-//        TMmixedEigs(ALvec,ARvec,VL,l,-K,nev,"LM",OLtol,IBMat(),0,true);
-//        TMmixedEigs(ALvec,ARvec,VR,r,K,nev,"LM",OLtol,IBMat(),0,true);
-//        teststuff(ALvec,ARvec,Lvec,Rvec,LM,RM,OLL,OLR);
-//        cout<<"folder: "<<savefolder<<endl;
-//        cout<<"name: "<<fileparts(saveEname).name<<endl;
-//        return 0;
-//    }
-
 
     /// prepare output filenames/folders etc.
 
@@ -239,8 +226,9 @@ int main(int argc, char** argv)
     RMatType dE(np,nev,fill::zeros);
     std::vector<CMatType> X(np);
 
+    /// We use them to control if we invert (1-T^L_R) and (1-T^R_L) fully or if we project out the dominant subspace
+    /// if they're
     tictoc tt,tts;
-
     /// unfortunately, ARPACK is not thread safe, so we cannot parallelize the following loop :-(
     tt.tic();
     for (uint n=0; n<np; ++n)
@@ -249,10 +237,19 @@ int main(int argc, char** argv)
         Real p_act = pvec(n)*datum::pi*N;
         Complex kfac = Complex(cos(p_act),sin(p_act));
 
-        std::function<void (Complex*,Complex*)> Hfun =
-        [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LM,&RM,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
+
+        /// only project out the dominant subspace, if K=0 and p=0
+        BlockMat<IKey,Scalar> LMpass, RMpass;
+        if (abs(p_act)<10*InvETol && K==K0)
         {
-            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,InvETol,verbose);
+            LMpass = LM;
+            RMpass = RM;
+        }
+
+        std::function<void (Complex*,Complex*)> Hfun =
+        [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LMpass,&RMpass,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
+        {
+            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LMpass,RMpass,H,HLtot,HRtot,InvETol,verbose);
         };
 
         tts.tic();
