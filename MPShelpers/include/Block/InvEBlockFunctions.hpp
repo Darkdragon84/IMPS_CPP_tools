@@ -100,32 +100,6 @@ InvEfun_proj_fac(const Col<VT>& invec,
     BlockMat<KT,VT> in(invec,dims,false,true);
     BlockMat<KT,VT> out(outvec,dims,false,true);;
 
-//    const VT* inmem = invec.memptr();
-//    VT* outmem = outvec.memptr();
-//
-//    BlockMat<KT,VT> in;
-//    BlockMat<KT,VT> out;
-//
-//    uint pos=0,ml,mr;
-//    for (const auto& dimit : dims)
-//    {
-//        ml=get<2>(dimit);
-//        mr=get<3>(dimit);
-//        in.emplace_hint(in.end(),
-//                        get<0>(dimit),
-//                        std::make_pair(get<1>(dimit),
-//                                       Mat<VT>(const_cast<VT*>(&inmem[pos]),ml,mr,false,true)
-//                                       )
-//                        );
-//        out.emplace_hint(out.end(),
-//                         get<0>(dimit),
-//                         std::make_pair(get<1>(dimit),
-//                                        Mat<VT>(&outmem[pos],ml,mr,false,true)
-//                                        )
-//                         );
-//        pos += ml*mr;
-//    }
-
     VT trtmp{0}; /// trace(x*rho_in) part
     {
         auto rhoit = rho_inside.cbegin();
@@ -252,7 +226,11 @@ InvertE_proj(const MPStype& MPS,
     if (maxit==0) maxit = m_tot;
 
     /// it is not necessary to project out |R)(L| from y0, as this will happen in the very first iteration of gmres anyway
-    if (y0.empty() || y0.GetSizesVector() != dims)  y0 = BMatType(dims,fill::randn);
+    if (y0.empty() || y0.GetSizesVector() != dims)
+    {
+        if (verbose) cout<<"InvertE_proj(A,x): randomly initializing y0"<<endl;
+        y0 = BMatType(dims,fill::randn);
+    }
 
 
     std::function<Col<VT> (const Col<VT>&)> Afun;
@@ -287,66 +265,6 @@ InvertE_proj(const MPStype& MPS,
     return BMatType(y,dims);
 }
 
-///// solves (y|[1 - T + |R)(L|]    = (x|[1 - |R)(L|]    or
-/////           [1 - T + |R)(L|]|y) =    [1 - |R)(L|]|x) iteratively for y
-//template<typename KT, typename VT, typename MPStype> /// MPStype can be both a single MPS matrix or an MPSArray
-//BlockDiagMat<KT,VT>
-//InvertE_proj(const MPStype& MPS,
-//             const BlockDiagMat<KT,VT>& x,
-//             const BlockDiagMat<KT,VT>& L,
-//             const BlockDiagMat<KT,VT>& R,
-//             dirtype dir,
-//             Real tol=1e-14,
-//             uint maxit=0,
-//             BlockDiagMat<KT,VT> y0 = BlockDiagMat<KT,VT>(),
-//             bool verbose=false)
-//{
-///// TODO (valentin#1#): Add functionality to pass empty BlockDiagMat to represent the identity
-//
-//    dim_vec<KT> dims = x.GetUniformSizesVector();
-//    assert(x.size() == L.size() && dims == L.GetUniformSizesVector() && "x and L must have same QN and sizes");
-//    assert(x.size() == R.size() && dims == R.GetUniformSizesVector() && "x and R must have same QN and sizes");
-//
-//    /// determine problem size, i.e. the total size of the concatenation of the vectorizations of all blocks
-//    uint m_tot = x.GetNElem();
-//    if (maxit==0) maxit = m_tot;
-//
-//    /// it is not necessary to project out |R)(L| from y0, as this will happen in the very first iteration of gmres anyway
-//    if (y0.empty() || y0.GetUniformSizesVector() != dims)  y0 = BlockDiagMat<KT,VT>(dims,fill::randn);
-//
-//
-//    std::function<Col<VT> (const Col<VT>&)> Afun;
-//    std::function<BlockDiagMat<KT,VT> (const BlockDiagMat<KT,VT>&)> TMfun;
-//
-//    Col<VT> xpv = x.Vectorize(); /// prepare input vector
-//    if (dir == l)
-//    {
-//        /// project out dominant subspace: (x| -> (x|[1 - |R)(L|]
-//        xpv -= trace(x*R)*L.Vectorize();
-//
-//        /// implements (y| = (x|[1 - T + |R)(L|]
-//        TMfun = [&MPS] (const BlockDiagMat<KT,VT>& in) -> BlockDiagMat<KT,VT> {return ApplyTMLeft(MPS,in);};
-//        Afun = [&TMfun,&L,&R,&dims,m_tot](const Col<VT>& invec) -> Col<VT>{return InvEfun_proj(invec,TMfun,R,L,dims,m_tot);}; /// there is a slight difference to dir==r, keep separate!
-//    }
-//    else if(dir == r)
-//    {
-//        /// project out dominant subspace: |x) -> [1 - |R)(L|]|x)
-//        xpv -= trace(L*x)*R.Vectorize();
-//
-//        /// implements |y) = [1 - T + |R)(L|]|x)
-//        TMfun = [&MPS] (const BlockDiagMat<KT,VT>& in) -> BlockDiagMat<KT,VT> {return ApplyTMRight(MPS,in);};
-//        Afun = [&TMfun,&L,&R,&dims,m_tot](const Col<VT>& invec) -> Col<VT>{return InvEfun_proj(invec,TMfun,L,R,dims,m_tot);};/// there is a slight difference to dir==l, keep separate!
-//    }
-//    else throw std::logic_error("InvertE_proj: wrong direction specified");
-//
-//    Col<VT> y(m_tot);
-//
-//    int flag = gmres(Afun,xpv,y,y0.Vectorize(),tol,maxit,0,verbose);
-//    if (flag<0) cerr<<"InvertE_proj did not converge"<<endl;
-//
-//    return BlockDiagMat<KT,VT>(y,dims);
-//}
-
 
 /// solves (y|[1 - T + |R)(L|] = (x|[1 - |R)(L|] or [1 - T + |R)(L|]|y) = [1 - |R)(L|]|x) iteratively for y
 /// this pretty much only makes sense when |fac|=1 and arg(fac) is equal to an argument of an eigenvalue of the mixed TM with magnitude ~ 1, otherwise we can just use InvertE_fac (t.b.i. for BlockDiagMats though)
@@ -380,7 +298,11 @@ InvertE_proj_fac(const MPStype& MPSA,
     if (maxit==0) maxit = m_tot;
 
     /// it is not necessary to project out |R)(L| from y0, as this will happen in the very first iteration of gmres anyway
-    if (y0.empty() || y0.GetSizesVector() != dims)  y0 = BMatTypeX(dims,fill::randn);
+    if (y0.empty() || y0.GetSizesVector() != dims)
+    {
+        if (verbose) cout<<"InvertE_proj_fac(A,B,x): randomly initializing y0"<<endl;
+        y0 = BMatTypeX(dims,fill::randn);
+    }
 
 
     std::function<Col<VT> (const Col<VT>&)> Afun;
@@ -421,69 +343,6 @@ InvertE_proj_fac(const MPStype& MPSA,
 }
 
 
-///// solves (y|[1 - T + |R)(L|] = (x|[1 - |R)(L|] or [1 - T + |R)(L|]|y) = [1 - |R)(L|]|x) iteratively for y
-///// this pretty much only makes sense when |fac|=1 and arg(fac) is equal to an argument of an eigenvalue of the mixed TM with magnitude ~ 1, otherwise we can just use InvertE_fac (t.b.i. for BlockDiagMats though)
-//template<typename KT, typename VT, typename MPStype> /// MPStype can be both a single MPS matrix or an MPSArray
-//BlockDiagMat<KT,VT>
-//InvertE_proj_fac(const MPStype& MPSA,
-//                 const MPStype& MPSB,
-//                 const BlockDiagMat<KT,VT>& x,
-//                 const BlockDiagMat<KT,typename MPStype::scalar_type>& L,
-//                 const BlockDiagMat<KT,typename MPStype::scalar_type>& R,
-//                 dirtype dir,
-//                 VT fac,
-//                 Real tol=1e-14,
-//                 uint maxit=0,
-//                 BlockDiagMat<KT,VT> y0 = BlockDiagMat<KT,VT>(),
-//                 bool verbose=false)
-//{
-///// TODO (valentin#1#): Add functionality to pass empty BlockDiagMat to represent the identity
-//
-//    dim_vec<KT> dims = x.GetUniformSizesVector();
-//    assert(x.size() == L.size() && dims == L.GetUniformSizesVector() && "x and L must have same QN and sizes");
-//    assert(x.size() == R.size() && dims == R.GetUniformSizesVector() && "x and R must have same QN and sizes");
-//
-//    /// determine problem size, i.e. the total size of the concatenation of the vectorizations of all blocks
-//    uint m_tot = x.GetNElem();
-//    if (maxit==0) maxit = m_tot;
-//
-//    /// it is not necessary to project out |R)(L| from y0, as this will happen in the very first iteration of gmres anyway
-//    if (y0.empty() || y0.GetUniformSizesVector() != dims)  y0 = BlockDiagMat<KT,VT>(dims,fill::randn);
-//
-//
-//    std::function<Col<VT> (const Col<VT>&)> Afun;
-//    std::function<BlockDiagMat<KT,VT> (const BlockDiagMat<KT,VT>&)> TMfun;
-//
-//    Col<VT> xpv = x.Vectorize(); /// prepare input vector
-//    if (dir == l)
-//    {
-//        /// project out dominant subspace: (x| -> (x|[1 - |R)(L|]
-//        xpv -= trace(x*R)*L.Vectorize();
-//
-//        /// implements (y| = (x|[1 - T + |R)(L|]
-//        TMfun = [&MPSA,&MPSB] (const BlockDiagMat<KT,VT>& in) -> BlockDiagMat<KT,VT> {return ApplyTMmixedLeftDiag(MPSA,MPSB,in); };
-//        Afun = [&TMfun,&L,&R,&dims,fac,m_tot](const Col<VT>& invec) -> Col<VT>{return InvEfun_proj_fac(invec,TMfun,R,L,dims,fac,m_tot);}; /// there is a slight difference to dir==r, keep separate!
-//    }
-//    else if(dir == r)
-//    {
-//        /// project out dominant subspace: |x) -> [1 - |R)(L|]|x)
-//        xpv -= trace(L*x)*R.Vectorize();
-//
-//        /// implements |y) = [1 - T + |R)(L|]|x)
-//        TMfun = [&MPSA,&MPSB] (const BlockDiagMat<KT,VT>& in) -> BlockDiagMat<KT,VT> {return ApplyTMmixedRightDiag(MPSA,MPSB,in);};
-//        Afun = [&TMfun,&L,&R,&dims,fac,m_tot](const Col<VT>& invec) -> Col<VT>{return InvEfun_proj_fac(invec,TMfun,L,R,dims,fac,m_tot);};/// there is a slight difference to dir==l, keep separate!
-//    }
-//    else throw std::logic_error("InvertE_proj_fac: wrong direction specified");
-//
-//    Col<VT> y(m_tot);
-//
-//    int flag = gmres(Afun,xpv,y,y0.Vectorize(),tol,maxit,0,verbose);
-//    if (flag<0) cerr<<"InvertE_proj_fac did not converge"<<endl;
-//
-//    return BlockDiagMat<KT,VT>(y,dims);
-//}
-
-
 /// solves (y|[1 - fac*T] = (x| or [1 - fac*T]|y) = |x) iteratively for y with |fac|<1
 /// MPStype can be both a single MPS matrix or an MPSArray
 /// BMatType can be both a BlockMat or a BlockDiagMat
@@ -507,7 +366,11 @@ InvertE_fac(const MPStype& MPS,
     if (maxit==0) maxit = m_tot;
 
     /// if y0.size() == 0 the second condition will not even be evaluated (short-circuiting)
-    if (y0.empty() || y0.GetSizesVector() != dims) y0 = BMatType(dims,fill::randn);
+    if (y0.empty() || y0.GetSizesVector() != dims)
+    {
+        if (verbose) cout<<"InvertE_fac(A,x): randomly initializing y0"<<endl;
+        y0 = BMatType(dims,fill::randn);
+    }
 
     std::function<BMatType (const BMatType&)> TMfun;
 
@@ -591,7 +454,11 @@ InvertE_fac(const MPStype& A,
     if (maxit==0) maxit = m_tot;
 
     /// if y0.size() == 0 the second condition will not even be evaluated (short-circuiting)
-    if (y0.empty() || y0.GetSizesVector() != dims) y0 = BMatType(dims,fill::randn);
+    if (y0.empty() || y0.GetSizesVector() != dims)
+    {
+        if (verbose) cout<<"InvertE_proj_fac(A,B,x): randomly initializing y0"<<endl;
+        y0 = BMatType(dims,fill::randn);
+    }
 
     std::function<BMatType (const BMatType&)> TMfun;
 

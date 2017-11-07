@@ -31,9 +31,9 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
           const BlockDiagMatArray<KT,VTA>& HLtot,
           const BlockDiagMatArray<KT,VTA>& HRtot,
           Real InvETol=1e-14,
-          bool verbose=false)//,
-//          BlockMat<KT,VTX>* pEBR,
-//          BlockMat<KT,VTX>* pEHBL)
+          bool verbose=false,
+          BlockMat<KT,VTX>* pEBR=nullptr,
+          BlockMat<KT,VTX>* pEHBL=nullptr)
 {
     /// MAKE SURE XOUT IS INITIALIZED TO ZERO AND CONTAINS THE CORRECT SYMMETRY SECTORS
     /// CHECK OUTSIDE IF ALL ARRAYS HAVE THEIR PROPER LENGTHS
@@ -77,20 +77,20 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     assert(ABR.size()==N);
 
     /// contributions from all other UC to the right (checked)
-    if (verbose)cout<<"EBR:"<<endl;
-    if (proj) EBR = InvertE_proj_fac(AL,AR,ABR.front(),LM,RM,r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
-    else EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
-//    if (pEBR == nullptr)
-//    {
-//        EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,max(tol/100,InvETol),0,BlockMat<KT,VTX>(),verbose);
-//    }
-//    else
-//    {
-//        *pEBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,max(tol/100,InvETol),0,*pEBR,verbose);
-//        EBR = *pEBR;
-//    }
-
-
+    if (verbose) cout<<"EBR:"<<endl;
+    if (pEBR == nullptr)
+    {
+        if (proj)   EBR = InvertE_proj_fac(AL,AR,ABR.front(),LM,RM,r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
+        else        EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
+    }
+    else /// reuse EBR from last iteration
+    {
+        if (proj)   {EBR = InvertE_proj_fac(AL,AR,ABR.front(),LM,RM,r,kfac,InvETol,0,*pEBR,verbose);
+                           if (verbose) InvertE_proj_fac(AL,AR,ABR.front(),LM,RM,r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);}
+        else        {EBR = InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,*pEBR,verbose);
+                           if (verbose) InvertE_fac(AL,AR,ABR.front(),r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);}
+        *pEBR = EBR;
+    }
 
     /// combined AB overlap contribs of both within and right of current UC (checked)
     ABRtot.emplace_front(kfac*EBR);
@@ -118,23 +118,22 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
 
 
     /// contribs from all other UC to the left (checked)
-    if (verbose)cout<<"EHBL:"<<endl;
-    if (proj) EHBL = InvertE_proj_fac(AR,AL,HBL.back(),LM.t(),RM.t(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
-    else EHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
-
-//    if (pEHBL == nullptr)
-//    {
-//        EHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,max(tol/100,InvETol),0,BlockMat<KT,VTX>(),verbose);
-//        pEHBL = &EHBL;
-//    }
-//    else
-//    {
-//        *pEHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,max(tol/100,InvETol),0,*pEHBL,verbose);
-//        EHBL = *pEHBL;
-//    }
+    if (verbose) cout<<"EHBL:"<<endl;
+    if (pEHBL == nullptr)
+    {
+        if (proj) EHBL = InvertE_proj_fac(AR,AL,HBL.back(),LM.t(),RM.t(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
+        else EHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
+    }
+    else /// reuse EHBL from last iteration
+    {
+        if (proj)   {EHBL = InvertE_proj_fac(AR,AL,HBL.back(),LM.t(),RM.t(),l,ckfac,InvETol,0,*pEHBL,verbose);
+                            if (verbose) InvertE_proj_fac(AR,AL,HBL.back(),LM.t(),RM.t(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);}
+        else        {EHBL = InvertE_fac(AR,AL,HBL.back(),l,ckfac,InvETol,0,*pEHBL,verbose);
+                            if (verbose) InvertE_fac(AR,AL,HBL.back(),l,ckfac,InvETol,0,BlockMat<KT,VTX>(),verbose);}
+        *pEHBL = EHBL;
+    }
 
     HBLtot.emplace_back(ckfac*EHBL);
-
     for (uint n=0;n<N-1;++n)
     {
         EHBL = ApplyTMmixedLeft(AR[n],AL[n],EHBL);
@@ -172,9 +171,7 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /************************************************************************************************/
 
     /// n=0 has only contribs from next left UC (checked)
-//    Bout.front() += ckfac*EHBL*AR.front();
     Bout.front() += HBLtot.back()*AR.front();
-//    Bout.front() += ckfac*(*pEHBL)*AR.front();
 
     auto HBA = ApplyOperator(Bin.back()*AR.front(),H);
     for (uint s=0; s<d; ++s)
@@ -189,12 +186,7 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /// n>0 also has contribs from within same UC (checked)
     for (uint n=1; n<N; ++n)
     {
-//        EHBL = ApplyTMmixedLeft(AR[n-1],AL[n-1],EHBL);
-//        Bout[n] += (HBL[n-1] + ckfac*EHBL)*AR[n];
-
         Bout[n] += HBLtot[n-1]*AR[n];
-//        (*pEHBL) = ApplyTMmixedLeft(AR[n-1],AL[n-1],*pEHBL);
-//        Bout[n] += (HBL[n-1] + ckfac*(*pEHBL))*AR[n];
 
         auto HBA = ApplyOperator(Bin[n-1]*AR[n],H);
         for (uint s=0; s<d; ++s)
@@ -251,53 +243,17 @@ ApplyHeff(const VTX* in,
           const BlockDiagMatArray<KT,VTA>& HLtot,
           const BlockDiagMatArray<KT,VTA>& HRtot,
           Real InvETol=1e-14,
-          bool verbose=false)//,
-//          BlockMat<KT,VTX>* pEBR,
-//          BlockMat<KT,VTX>* pEHBL)
+          bool verbose=false,
+          BlockMat<KT,VTX>* pEBR=nullptr,
+          BlockMat<KT,VTX>* pEHBL=nullptr)
 {
     std::fill(out,out+mtot,0.);
 
     BlockMatArray<KT,VTX> Xin(in,xdims,false,true);
     BlockMatArray<KT,VTX> Xout(out,xdims,false,true);
 
-//    memset(out,0.,mtot*sizeof(*out));
-//    BlockMatArray<KT,VTX> Xin,Xout;
-//    uint pos=0;
-//    for (const auto& xvit : xdims)
-//    {
-//        Xin.emplace_back(BlockMat<KT,VTX>(&in[pos],xvit,false,true));
-//        Xout.emplace_back(BlockMat<KT,VTX>(&out[pos],xvit,false,true));
-//        pos += xvit.GetNElem();
-//
-////        Xin.emplace_back(BlockMat<KT,VTX>());
-////        Xout.emplace_back(BlockMat<KT,VTX>());
-////
-////        for (const auto& dimit : xvit)
-////        {
-////            uint ml = get<2>(dimit);
-////            uint mr = get<3>(dimit);
-////
-////             Xin.back().emplace_hint(Xin.back().end(),
-////                                     get<0>(dimit),
-////                                     std::make_pair(get<1>(dimit),
-////                                                    Mat<VTX>(const_cast<VTX*>(&in[pos]),ml,mr,false,true)
-////                                                    )
-////                                     );
-////
-////            Xout.back().emplace_hint(Xout.back().end(),
-////                                     get<0>(dimit),
-////                                     std::make_pair(get<1>(dimit),
-////                                                    Mat<VTX>(&out[pos],ml,mr,false,true)
-////                                                    )
-////                                     );
-////            pos += ml*mr;
-////        }
-//
-//    }
-
-//    ApplyHeff(Xin,Xout,kfac,AL,AR,NL,H,HLtot,HRtot,tol,InvETol,verbose,pEBR,pEHBL);
-    ApplyHeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,H,HLtot,HRtot,InvETol,verbose);
-//    ApplyHeff(Xin,Xout,kfac,AL,AR,NL,H,HLtot,HRtot,tol,InvETol,verbose);
+//    ApplyHeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,H,HLtot,HRtot,InvETol,verbose);
+    ApplyHeff(Xin,Xout,kfac,AL,AR,NL,LM,RM,H,HLtot,HRtot,InvETol,verbose,pEBR,pEHBL);
 }
 
 
