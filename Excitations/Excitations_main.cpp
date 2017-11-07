@@ -226,6 +226,8 @@ int main(int argc, char** argv)
     RMatType dE(np,nev,fill::zeros);
     std::vector<CMatType> X(np);
 
+    BlockMat<IKey,Complex> EBR, EHBL;
+
     /// We use them to control if we invert (1-T^L_R) and (1-T^R_L) fully or if we project out the dominant subspace
     /// if they're
     tictoc tt,tts;
@@ -247,9 +249,10 @@ int main(int argc, char** argv)
         }
 
         std::function<void (Complex*,Complex*)> Hfun =
-        [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LMpass,&RMpass,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
+//        [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LMpass,&RMpass,&H,&HLtot,&HRtot,tol,InvETol,verbose,&EBR,&EHBL](Complex* in, Complex* out) -> void
+        [&](Complex* in, Complex* out) -> void
         {
-            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LMpass,RMpass,H,HLtot,HRtot,InvETol,verbose);
+            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LMpass,RMpass,H,HLtot,HRtot,InvETol,verbose,&EBR,&EHBL);
         };
 
         tts.tic();
