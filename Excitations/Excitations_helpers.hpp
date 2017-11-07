@@ -9,10 +9,10 @@
 //       const MPSBlockMatArray<KT,VTA>& AR,
 //       const BlockMat<KT,VTX>& x,
 //       Complex kfac,
-//       Real tol,
+//       Real InvETol,
 //       bool verbose = false)
 //{
-//    return InvertE_fac(AL,AR,x,r,kfac,tol,0,BlockMat<KT,VTX>(),verbose);
+//    return InvertE_fac(AL,AR,x,r,kfac,InvETol,0,BlockMat<KT,VTX>(),verbose);
 //}
 
 
@@ -315,7 +315,7 @@ HeffConstants(BlockDiagMatArray<KT,VTO>& HLtot,
               const BlockDiagMat<KT,VTA>& L,
               const BlockDiagMat<KT,VTA>& R,
               const SparseOperator<VTH>& H,
-              double tol=1e-14,
+              double InvETol=1e-14,
               int maxit=0,
               bool verbose=false)
 {
@@ -353,7 +353,7 @@ HeffConstants(BlockDiagMatArray<KT,VTO>& HLtot,
 
 /// TODO (valentin#1#): switch to iterators
 
-    EHL.back() = InvertE_proj(AL,HL.back(),eye<VTO>(R.GetMr()),R,l,tol,maxit,BlockDiagMat<KT,VTO>(),verbose);
+    EHL.back() = InvertE_proj(AL,HL.back(),eye<VTO>(R.GetMr()),R,l,InvETol,maxit,BlockDiagMat<KT,VTO>(),verbose);
     HLtot.back() = EHL.back();
 
     for (uint n=0;n<N-1;++n)
@@ -362,7 +362,7 @@ HeffConstants(BlockDiagMatArray<KT,VTO>& HLtot,
         HLtot[n] = HL[n] + EHL[n];
     }
 
-    EHR.front() = InvertE_proj(AR,HR.front(),L,eye<VTO>(L.GetMr()),r,tol,maxit,BlockDiagMat<KT,VTO>(),verbose);
+    EHR.front() = InvertE_proj(AR,HR.front(),L,eye<VTO>(L.GetMr()),r,InvETol,maxit,BlockDiagMat<KT,VTO>(),verbose);
     HRtot.front() = EHR.front();
 
     for (uint n=N-1;n>0;--n)
@@ -372,7 +372,7 @@ HeffConstants(BlockDiagMatArray<KT,VTO>& HLtot,
     }
 
 /// iterator part
-//    EHL.emplace_back(InvertE_proj(AL,HL.back(),eye<VTO>(C.back().GetMr()),R,l,tol));
+//    EHL.emplace_back(InvertE_proj(AL,HL.back(),eye<VTO>(C.back().GetMr()),R,l,InvETol));
 //    cout<<trace(EHL.back()*R)<<endl;
 //
 //    HLtot.emplace_back(EHL.back());
@@ -390,7 +390,7 @@ HeffConstants(BlockDiagMatArray<KT,VTO>& HLtot,
 //    shift(HLtot,-1);
 //
 //
-//    EHR.emplace_back(InvertE_proj(AR,HR.front(),L,eye<VTO>(C.back().GetMr()),r,tol));
+//    EHR.emplace_back(InvertE_proj(AR,HR.front(),L,eye<VTO>(C.back().GetMr()),r,InvETol));
 //    cout<<trace(L*EHR.back())<<endl;
 
 }
