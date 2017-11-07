@@ -114,17 +114,12 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     HBL.emplace_back(ApplyTMmixedLeft(HLtot.back()*Bin.front(),AL.front()) +
                      ApplyOpTMLeftGen(H,AL.back()*Bin.front() + ckfac*(Bin.back()*AR.front()),AL.back()*AL.front()));
 
+    for (uint n=1;n<N;++n)
     {
-        auto ALit = AL.cbegin() + 1;
-        auto ARit = AR.cbegin() + 1;
-        auto Bit = Bin.cbegin() + 1;
-        auto HLit = HLtot.cbegin();
-        for ( ; ALit!=AL.cend(); ++ALit,++ARit,++Bit,++HLit)
-        {
-            HBL.emplace_back(ApplyTMmixedLeft(HBL.back()*(*ARit) + (*HLit)*(*Bit),*ALit) +
-                             ApplyOpTMLeftGen(H,(*(ALit-1))*(*Bit) + (*(Bit-1))*(*ARit),(*(ALit-1))*(*ALit) ) );
-        }
+        HBL.emplace_back(ApplyTMmixedLeft(HBL.back()*AR[n] + HLtot[n-1]*Bin[n], AL[n]) +
+                         ApplyOpTMLeftGen(H,AL[n-1]*Bin[n] + Bin[n-1]*AR[n], AL[n-1]*AL[n]) );
     }
+
 
     /// contribs from all other UC to the left (checked)
     if (verbose)cout<<"EHBL:"<<endl;
