@@ -31,9 +31,9 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
           const BlockDiagMatArray<KT,VTA>& HLtot,
           const BlockDiagMatArray<KT,VTA>& HRtot,
           Real InvETol=1e-14,
-          bool verbose=false)//,
-//          BlockMat<KT,VTX>* pEBR,
-//          BlockMat<KT,VTX>* pEHBL)
+          bool verbose=false,
+          BlockMat<KT,VTX>* pEBR=nullptr,
+          BlockMat<KT,VTX>* pEHBL=nullptr)
 {
     /// MAKE SURE XOUT IS INITIALIZED TO ZERO AND CONTAINS THE CORRECT SYMMETRY SECTORS
     /// CHECK OUTSIDE IF ALL ARRAYS HAVE THEIR PROPER LENGTHS
