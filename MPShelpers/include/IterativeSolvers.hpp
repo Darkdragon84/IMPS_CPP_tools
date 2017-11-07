@@ -30,20 +30,35 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
         if (verbose) cout<<"gmres: krylovdim > dim="<<dim<<", setting back to krylovdim="<<dim<<endl;
         krylovdim = dim;
     }
+//    wall_clock tt;
 
     Col<T> r0 = b - Afun(x0);
     x = x0;
     Col<T> r(r0), w;
     Real bnorm = norm(b), rnorm = norm(r), thresh=2e-16;
     T beta,htmp1,htmp2,phase,habs;
-    Mat<T> V(dim,krylovdim+1,fill::zeros);
-    Mat<T> H(krylovdim+1,krylovdim+1,fill::zeros);
-    Col<T> c(krylovdim+1,fill::zeros),s(krylovdim+1,fill::zeros), gamma(krylovdim+1,fill::zeros);
+
+    /// do NOT initialize to zero!! Not necessary and uses huge amounts of memory and CPU time!
+//    Mat<T> V(dim,krylovdim+1,fill::zeros);
+//    Mat<T> H(krylovdim+1,krylovdim+1,fill::zeros);
+//    Col<T> c(krylovdim+1,fill::zeros);
+//    Col<T> s(krylovdim+1,fill::zeros);
+//    Col<T> gamma(krylovdim+1,fill::zeros);
+
+    Mat<T> V(dim,krylovdim+1);
+    Mat<T> H(krylovdim+1,krylovdim+1);
+    Col<T> c(krylovdim+1);
+    Col<T> s(krylovdim+1);
+    Col<T> gamma(krylovdim+1);
+
     gamma(0) = rnorm;
     V.col(0) = r/rnorm;
 
 //    ct = 0;
     uint kdim=0;
+
+//    std::cin.get();
+//    tt.tic();
     for (uint j = 0;j < krylovdim; ++j)
     {
 //        cout<<j+1<<":"<<endl;
@@ -95,14 +110,15 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
         }
         rnorm = std::abs(gamma(j+1));
 //        if(verbose) cout<<j+1<<":"<<rnorm<<endl;
-        if (rnorm < tol*bnorm)
+        /// convergence (measure absolute |r| rather than relative |r|/|b|!)
+//        if (rnorm < tol*bnorm)
+        if (rnorm < tol)
         {
             flag = int(kdim);
             break;
         }
     }
-    /// after completion, reconstruct x from alpha and v
-    /// determine alpha from solving R*alpha=gamma. Since R is upper triangular this can be done efficiently from the bottom up
+//    cout<<"main gmres:"<<tt.toc()<<endl;
 
     if (H.n_cols > kdim) H.resize(kdim,kdim);
     if (gamma.n_elem > kdim) gamma.resize(kdim);
@@ -110,14 +126,18 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
 
 //    cout<<"V is ONS:"<<norm(V.t()*V - eye<RMatType>(V.n_cols,V.n_cols),"fro")<<endl;
 
+    /// after completion, reconstruct x from alpha and v
+    /// determine alpha from solving R*alpha=gamma. Since R is upper triangular this can be done efficiently from the bottom up
     Col<T> alpha = solve(trimatu(H),gamma); /// by using trimatu the lapack routine for solving upper triangular SOE is invoked
     x += V*alpha;
 
     if (flag < 0)
     {
-        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|/|b|="<<norm(b - Afun(x))/bnorm<<", flag="<<flag<<endl;
+//        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|/|b|="<<norm(b - Afun(x))/bnorm<<", flag="<<flag<<endl;
+        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|="<<norm(b - Afun(x))<<", flag="<<flag<<endl;
     }
-    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|/|b|="<<norm(b - Afun(x))/bnorm<<endl;
+//    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|/|b|="<<norm(b - Afun(x))/bnorm<<endl;
+    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|="<<norm(b - Afun(x))<<endl;
 
 
     return flag;
