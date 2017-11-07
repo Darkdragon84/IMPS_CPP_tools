@@ -227,6 +227,7 @@ InvEfun_fac(const Col<VT>& invec,
 /// solves (y|[1 - T + |R)(L|]    = (x|[1 - |R)(L|]    or
 ///           [1 - T + |R)(L|]|y) =    [1 - |R)(L|]|x) iteratively for y
 /// MPStype can be both a single MPS matrix or an MPSArray
+/// BMatType can be both BlockMat and BlockDiagMat
 template<typename MPStype, typename BMatType>
 BMatType
 InvertE_proj(const MPStype& MPS,
