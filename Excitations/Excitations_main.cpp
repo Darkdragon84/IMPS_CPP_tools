@@ -63,6 +63,8 @@ int main(int argc, char** argv)
     pp.GetValue(np,"np",true);
 
     int frmt = std::ceil(-std::log10(tol));
+    InvETol = std::max(tol/10.,InvETol);
+
     cout.precision(frmt);
 
     /// create model
@@ -192,7 +194,7 @@ int main(int argc, char** argv)
 //        cout<<"-- AR "<<std::string(94,'-')<<endl;
 //        auto eobsR = MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
 
-        MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,xdims,mtot,p,std::max(tol,InvETol),verbose);
+        MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,xdims,mtot,p,InvETol,verbose);
         cout<<std::string(100,'=')<<endl;
     }
 
@@ -231,7 +233,7 @@ int main(int argc, char** argv)
 
     /// calculate B independent constants for applying effective Hamiltonian
     IDiagArray HLtot,HRtot;
-    HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,std::max(tol/100,InvETol),0,verbose);
+    HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,InvETol,0,verbose);
 
     /// actually calculate excitations
     RMatType dE(np,nev,fill::zeros);
@@ -250,7 +252,7 @@ int main(int argc, char** argv)
         std::function<void (Complex*,Complex*)> Hfun =
         [&xdims,mtot,kfac,&ALvec,&ARvec,&Cvec,&NLvec,&LM,&RM,&H,&HLtot,&HRtot,tol,InvETol,verbose](Complex* in, Complex* out) -> void
         {
-            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,std::max(tol,InvETol),verbose);
+            ApplyHeff(in,out,xdims,mtot,kfac,ALvec,ARvec,NLvec,LM,RM,H,HLtot,HRtot,InvETol,verbose);
         };
 
         tts.tic();
