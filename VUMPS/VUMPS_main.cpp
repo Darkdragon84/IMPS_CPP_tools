@@ -290,7 +290,7 @@ int main(int argc, char** argv)
 //            TMDominantEig(ALvec,R,r,1e-15,CL*CL.t());
             HAL = GetHL(ALvec,H);
             AAL = ALvec.back()*ALvec.front();
-            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,max(tol/100.,InvETol),0,EHL); /// here EHL0 helps a lot!!
+            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,max(tol/10.,InvETol),0,EHL); /// here EHL0 helps a lot!!
 
             /// shift unit cell one site over, all remaining instructions are effectively for nn+1
             shift(ALvec,-1);
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
 
             L = Cvec.front().t()*Cvec.front();
             HAR = GetHR(ARvec,H);
-            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/100.,InvETol),0,EHR0[PBC(nn+1)]); /// interestingly, here EHR0 also helps, contrary to the implementation without QN!!
+            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/10.,InvETol),0,EHR0[PBC(nn+1)]); /// interestingly, here EHR0 also helps, contrary to the implementation without QN!!
 
 
 
