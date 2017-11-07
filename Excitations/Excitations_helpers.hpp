@@ -70,15 +70,11 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
 
     /// cumulative contribution of AB overlaps to the right within same UC (checked)
     ABR.emplace_front(ApplyTMmixedRight(Bin.back(),AR.back()));
+    for (uint n=N-1; n>0; --n)
     {
-        auto ALit = AL.crbegin() + 1;
-        auto ARit = AR.crbegin() + 1;
-        auto Bit = Bin.crbegin() + 1;
-        for ( ;ALit != AL.crend(); ++ALit, ++ARit, ++Bit)
-        {
-            ABR.emplace_front(ApplyTMmixedRight(*Bit + (*ALit)*ABR.front(),*ARit));
-        }
+        ABR.emplace_front(ApplyTMmixedRight(Bin[n-1] + AL[n-1]*ABR.front(),AR[n-1]));
     }
+    assert(ABR.size()==N);
 
     /// contributions from all other UC to the right (checked)
     if (verbose)cout<<"EBR:"<<endl;
