@@ -21,6 +21,7 @@ set(MPS_HELPERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../MPShelpers CACHE FILEPATH "Pa
 set(ARPACK_DIR $ENV{HOME}/libs/arpack CACHE FILEPATH "Path to Arpack Library")
 set(ARPACK_DEBUG libarpack_debug.a CACHE STRING "Arpack Debug Library")
 set(ARPACK_RELEASE libarpack_intel_release.a CACHE STRING "Arpack Release Library")
+set(ARPACK_RELDEB libarpack_intel_reldeb.a CACHE STRING "Arpack Release Library with Debug Symbols")
 
 ## LAPACK/BLAS Debug Libraries ##################################################################
 set(LIB_BLAS blas)
@@ -74,11 +75,11 @@ include_directories(${ARMADILLO_INCLUDE})
 if (${USE_NM_REP})
 	add_definitions(-DFHUB_NM_REP)
 	set(MPS_HELP_LIB_DEBUG ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_debug.a)
-	set(MPS_HELP_LIB_RELASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_release.a)
+	set(MPS_HELP_LIB_RELEASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_release.a)
 	set(MPS_HELP_LIB_RELDEB ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_NM_reldeb.a)
 else ()
 	set(MPS_HELP_LIB_DEBUG ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_debug.a)
-	set(MPS_HELP_LIB_RELASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_release.a)
+	set(MPS_HELP_LIB_RELEASE ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_release.a)
 	set(MPS_HELP_LIB_RELDEB ${MPS_HELPERS_DIR}/lib/libMPShelpers_static_reldeb.a)
 endif()
 
@@ -100,10 +101,12 @@ link_directories(${MKLLIBS})
 
 # link MPS helper library
 include_directories(${MPS_HELPERS_DIR}/include)
-target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELASE})
+target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELDEB})
+#target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELEASE})
 
 # link arpack
-target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELEASE})
+target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELDEB})
+#target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELEASE})
 
 # we have to loop, as we have to specify for each single library, if it is to be linked for debug or optimized
 foreach (_lib ${LAPACKBLAS_DEBUG})
