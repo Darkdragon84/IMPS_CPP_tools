@@ -101,12 +101,12 @@ link_directories(${MKLLIBS})
 
 # link MPS helper library
 include_directories(${MPS_HELPERS_DIR}/include)
-target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELDEB})
-#target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELEASE})
+#target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELDEB})
+target_link_libraries(Excitations debug ${MPS_HELP_LIB_DEBUG} optimized ${MPS_HELP_LIB_RELEASE})
 
 # link arpack
-target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELDEB})
-#target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELEASE})
+#target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELDEB})
+target_link_libraries(Excitations debug ${ARPACK_DIR}/${ARPACK_DEBUG} optimized ${ARPACK_DIR}/${ARPACK_RELEASE})
 
 # we have to loop, as we have to specify for each single library, if it is to be linked for debug or optimized
 foreach (_lib ${LAPACKBLAS_DEBUG})
