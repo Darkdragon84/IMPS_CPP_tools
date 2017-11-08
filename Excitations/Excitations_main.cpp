@@ -259,8 +259,8 @@ int main(int argc, char** argv)
         eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
 
         if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
-        dE.row(n) = real(dEtmp);
 
+        dE.row(n) = real(dEtmp.t()); /// dEtmp is column vector
         cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
         for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
         cout<<"("<<tts.toc()<<" s.)"<<endl;
