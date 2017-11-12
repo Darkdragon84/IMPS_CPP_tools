@@ -25,7 +25,7 @@ using ILamArray = BlockLamArray<IKey>;
 template<typename VT, typename KT, typename HVT>
 void
 CalculateExcitations(RMatType& dE,
-                     std::vector<CMatType>& X,
+                     std::vector<std::vector<BlockMatArray<KT,Complex> > >& X,
                      const MPSBlockMatArray<KT,VT>& ALvec,
                      const MPSBlockMatArray<KT,VT>& ARvec,
                      const BlockDiagMatArray<KT,VT>& Lvec,
@@ -206,13 +206,21 @@ int main(int argc, char** argv)
         else cerr<<"failed to save ALRN under "<<saveALRname<<endl;
     }
 
+
     /// actually calculate excitations
     RMatType dE(np,nev,fill::zeros);
-    std::vector<CMatType> X(np);
+    std::vector<std::vector<BlockMatArray<IKey,Complex> > > X(np);
 
+    uint ngs = 1;
+    if (avg)
+    {
+        ngs = N;
+        glob_shift = 0;
+    }
+    std::vector<RMatType> dEv(ngs);
+    std::vector<std::vector<std::vector<BlockMatArray<IKey,Complex> > > > Xv(ngs);
 
-/// TODO (valentin#1#2017-11-12): from here on distinguish between avg or single shot and loop accordingly
-    if (glob_shift > 0)
+    if (glob_shift>0)
     {
         shift(ALvec,glob_shift);
         shift(ARvec,glob_shift);
@@ -221,26 +229,65 @@ int main(int argc, char** argv)
         shift(Rvec,glob_shift);
     }
 
-    CalculateExcitations(dE,X,ALvec,ARvec,Lvec,Rvec,H,pvec,K,nev,tol,InvETol,verbose,test,obs);
+    for (uint gs=0; gs<ngs;++gs)
+    {
+        cout<<"global shift = "<<glob_shift+gs<<endl;
+        CalculateExcitations(dEv[gs],Xv[gs],ALvec,ARvec,Lvec,Rvec,H,pvec,K,nev,tol,InvETol,verbose,test,obs);
+
+        if (gs<ngs-1)
+        {
+            shift(ALvec,1);
+            shift(ARvec,1);
+            shift(Cvec,1);
+            shift(Lvec,1);
+            shift(Rvec,1);
+        }
+    }
+
+    if (ngs>1)
+    {
+        for (uint gs=0; gs<ngs; ++gs)
+        {
+            dE += dEv[gs];
+//            for (uint l=0; l<nev;++l) for (uint n=0;n<N;++n) X[l][n] += Xv[gs][l][n];
+        }
+        dE /= double(ngs);
+        for (uint n=0;n<np;++n)
+        {
+            cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
+            for (uint k=0; k<dE.n_cols; ++k) cout<<dE(n,k)<<"\t";
+            cout<<endl;
+        }
+    }
+    else
+    {
+        dE = dEv[0];
+        X = Xv[0];
+    }
+
 
 
     if (saveE)
     {
+
         string saveEname = sstr.str()+"_dE";
         if (dE.save(Fullpath(saveEname,"bin",savefolder))) cout<<"saved dE under "<<saveEname<<endl;
         else cerr<<"failed to save dE under "<<saveEname<<endl;
 
     }
 
-//    if (saveX)
-//    {
-//        string tmpXname = sstr.str() + "_X" + std::to_string(n);
+    if (saveX)
+    {
+        for (uint n=0;n<np;++n)
+        {
+            string tmpXname = sstr.str() + "_X" + std::to_string(n);
 //        std::vector<BlockMatArray<IKey,Complex> > Xvec;
 //        Xvec.reserve(nev);
 //        for (uint l=0; l<nev; ++l) Xvec.emplace_back(BlockMatArray<IKey,Complex>(X[n].col(l),xdims));
-//        if (save(Xvec,Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
-//        else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
-//    }
+            if (save(X[n],Fullpath(tmpXname,"bin",savefolder))) cout<<"X"<<n<<" saved under "<<tmpXname<<endl;
+            else cerr<<"failed to save X"<<n<<" under "<<tmpXname<<endl;
+        }
+    }
 
 
     return 0;
@@ -249,7 +296,7 @@ int main(int argc, char** argv)
 template<typename VT, typename KT, typename HVT>
 void
 CalculateExcitations(RMatType& dE,
-                     std::vector<CMatType>& X,
+                     std::vector<std::vector<BlockMatArray<KT,Complex> > >& X,
                      const MPSBlockMatArray<KT,VT>& ALvec,
                      const MPSBlockMatArray<KT,VT>& ARvec,
                      const BlockDiagMatArray<KT,VT>& Lvec,
@@ -336,8 +383,9 @@ CalculateExcitations(RMatType& dE,
     IDiagArray HLtot,HRtot;
     HeffConstants(HLtot,HRtot,ALvec,ARvec,L,R,H,InvETol,0,verbose);
 
-
     BlockMat<KT,Complex> EBR, EHBL;
+    dE.resize(np,nev);
+    X.resize(np);
 
     /// We use them to control if we invert (1-T^L_R) and (1-T^R_L) fully or if we project out the dominant subspace
     /// if they're
@@ -368,9 +416,16 @@ CalculateExcitations(RMatType& dE,
         };
 
         tts.tic();
-        eigs_n(Hfun,mtot,dEtmp,X[n],nev,"SR",tol);
+        CMatType Xmat;
+        eigs_n(Hfun,mtot,dEtmp,Xmat,nev,"SR",tol);
 
         if (any(imag(dEtmp)>tol)) cerr<<"IMAGINARY ENERGIES FOR p="<<pvec(n)<<": "<<imag(dEtmp)<<endl;
+
+//            X.emplace_back(std::vector<BlockMatArray<KT,Complex> >());
+//            for (uint l=0; l<nev; ++l) X.back().emplace_back(BlockMatArray<KT,Complex>(Xmat.col(l),xdims));
+        X[n].resize(nev);
+        for (uint l=0; l<nev; ++l) X[n][l] = BlockMatArray<KT,Complex>(Xmat.col(l),xdims);
+
 
         dE.row(n) = real(dEtmp.t()); /// dEtmp is column vector
         cout<<"p = "<<pvec(n)<<" "<<N<<" pi: \t";
