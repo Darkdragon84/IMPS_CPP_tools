@@ -3013,6 +3013,15 @@ public:
         for (const auto& it : *this) out.emplace_back(F(it));
         return out;
     };
+
+    BlockMatArray& operator+=(const BlockMatArray& rhs)
+    {
+        assert(this->size() == rhs.size());
+        auto lhit = this->begin();
+        auto rhit = rhs.cbegin();
+        for ( ; rhit!=rhs.cend(); ++lhit,++rhit) (*lhit)+=(*rhit);
+        return *this;
+    }
     /// DiskIO
 
     bool save(std::string name) const;
@@ -3149,6 +3158,8 @@ BlockMatArray<KT,VT>::ShowDims(const std::string str) const
     uint ct=1;
     for (const auto& it : *this) it.ShowDims("site "+std::to_string(ct++));
 }
+
+
 
 /**< HELPER FUNCTIONS FOR HEADERS FOR SAVING AND LOADING */
 template<typename KT>
