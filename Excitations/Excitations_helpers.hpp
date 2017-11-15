@@ -941,7 +941,7 @@ LRoverlaps(BlockMat<KT,VT>& LM,
     Real dOL = OLL - OLR;
     if (std::abs(dOL) > 10*OLtol) cerr<<"dominant left and right overlap between AL and AR differs by "<<dOL<<endl;
 
-//        cout<<"sign(OLL)="<<sign(OLL)<<", sign(OLR)="<<sign(OLR)<<endl;
+    if (verbose) cout<<"sign(OLL)="<<sign(OLL)<<", sign(OLR)="<<sign(OLR)<<endl;
     return 0.5*(OLR + OLL);
 }
 
