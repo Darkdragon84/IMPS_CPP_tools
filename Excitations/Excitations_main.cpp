@@ -88,11 +88,6 @@ int main(int argc, char** argv)
     sstr<<K;
     cout<<"simulation summary: "<<sstr.str()<<"_tol"<<tol<<"_InvETol"<<InvETol<<endl;
 
-//    /// output simulation info
-//    cout<<"Excitations for "<<np<<" momenta "<<pmin<<"<p<"<<pmax<<" and "<<nev<<" bands"<<endl;
-//    cout<<"global shift="<<glob_shift<<", relative shift (AR)="<<rel_shift<<endl;
-//    cout<<"quantum number of ground state:"<<QN<<", excitation:"<<K<<endl;
-
     /// load IMPS state
     ILamArray Lamvec;
     IDiagArray Cvec,Lvec,Rvec;
@@ -116,6 +111,7 @@ int main(int argc, char** argv)
 
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
+
 
     /// apply global shift to state
     if (glob_shift > N)
@@ -153,11 +149,24 @@ int main(int argc, char** argv)
         shift(Lvec,rel_shift);
     }
 
+    /// show quantum number sectors
+    if (verbose)
+    {
+        cout<<"I2K:"<<endl;
+        cout<<I2K<<endl;
+
+        cout<<"AL[0] outgoing"<<endl;
+        cout<<ALvec[0].GetMr()<<endl;
+
+        cout<<"AR[0] ingoing"<<endl;
+        cout<<ARvec[1].GetMl()<<endl;
+    }
+
     BlockDiagMat<IKey,Scalar> L(Lvec.back());
     BlockDiagMat<IKey,Scalar> R(Rvec.back());
 
     /// check overlaps between AL and AR and get left and right eigenmatrices of T^R_L (obtain the ones of T^L_R by hermitian conjugation)
-    BlockMat<IKey,Scalar> LM,RM;
+    BlockMat<IKey,Scalar> LM,RM,LMpass,RMpass;
     cout<<"mixed TM AL and AR"<<endl;
     Real OL = LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
     ARvec.front() *= sign(OL); /// fix overlap between AL and AR to be positive
@@ -188,13 +197,16 @@ int main(int argc, char** argv)
     {
         Real p=0.5;
         pp.GetValue(p,"p");
-//
-//        cout<<"-- AL "<<std::string(94,'-')<<endl;
-//        auto eobsL = MeasureObservables(obs,ALvec,IDiagArray(),Rvec,true);
-//        cout<<"-- AR "<<std::string(94,'-')<<endl;
-//        auto eobsR = MeasureObservables(obs,ARvec,Lvec,IDiagArray(),true);
 
-        MeasureExcitations(ALvec,ARvec,NLvec,LM,RM,Lvec,Rvec,obs,xdims,mtot,p,InvETol,verbose);
+        LMpass.clear();
+        RMpass.clear();
+        if (abs(p)<10*InvETol && K==K0)
+        {
+            LMpass = LM;
+            RMpass = RM;
+        }
+
+        MeasureExcitations(ALvec,ARvec,NLvec,LMpass,RMpass,Lvec,Rvec,obs,xdims,mtot,p,InvETol,verbose);
         cout<<std::string(100,'=')<<endl;
     }
 
@@ -240,9 +252,9 @@ int main(int argc, char** argv)
         Real p_act = pvec(n)*datum::pi*N;
         Complex kfac = Complex(cos(p_act),sin(p_act));
 
-
+        LMpass.clear();
+        RMpass.clear();
         /// only project out the dominant subspace, if K=0 and p=0
-        BlockMat<IKey,Scalar> LMpass, RMpass;
         if (abs(p_act)<10*InvETol && K==K0)
         {
             LMpass = LM;

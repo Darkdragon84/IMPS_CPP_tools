@@ -44,7 +44,7 @@ ApplyHeff(const BlockMatArray<KT,VTX>& Xin,
     /// then it is understood that we want to project out the dominant subspace (for which we need them)
     /// If they are not passed (empty) we fully invert T^L_R and T^R_L
     bool proj = (!LM.empty() && !RM.empty());
-//    if (proj) cout<<"projecting"<<endl;
+    if (verbose && proj) cout<<"projecting"<<endl;
 
     uint N = Xin.size();
 
@@ -371,7 +371,7 @@ ApplyOPeff(const BlockMatArray<KT,VTX>& Xin,
 /// TODO (valentin#1#): further optimize the generation of ABR, EBR, HBL, EHBL and see if we can generate the respective versions per site on the fly
 /// TODO (valentin#1#): Add functionality to recycle EBR and EHBL from last iteration. Possible solution: pass along pointers to these objects from the heap and have them allocated at the beginning before calling eigs
     bool proj = (!LM.empty() && !RM.empty());
-//    if (proj) cout<<"projecting"<<endl;
+    if (verbose && proj) cout<<"projecting"<<endl;
 
     uint N = Xin.size();
     assert(Xout.size() == N);
