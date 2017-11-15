@@ -159,7 +159,8 @@ int main(int argc, char** argv)
     /// check overlaps between AL and AR and get left and right eigenmatrices of T^R_L (obtain the ones of T^L_R by hermitian conjugation)
     BlockMat<IKey,Scalar> LM,RM;
     cout<<"mixed TM AL and AR"<<endl;
-    LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
+    Real OL = LRoverlaps(LM,RM,ALvec,ARvec,K,nev);
+    ARvec.front() *= sign(OL); /// fix overlap between AL and AR to be positive
 
     /// calculate ground state energy density to subtract from Hamiltonian
     cout<<"== H "<<std::string(94,'=')<<endl;
