@@ -23,45 +23,6 @@ using MPSArr = MPSBlockMatArray<IKey,Scalar>;
 using BDMatArr = BlockDiagMatArray<IKey,Scalar>;
 using LamArr = BlockLamArray<IKey>;
 
-//template<typename KT, typename VT>
-//void
-//ApplyHA(const MPSBlockMat<KT,VT>& in, MPSBlockMat<KT,VT>& out, const BlockDiagMat<KT,VT>& EHL, const BlockDiagMat<KT,VT>& EHR, const RedOp<BlockMat<KT,VT> >& HL, const RedOp<BlockMat<KT,VT> >& HR);
-//
-//template<typename KT, typename VT>
-//void
-//ApplyHAvec(VT* in, VT* out, const std::vector<dimkeypair_vec<KT> >& Adims, uint d, uint Am_tot, const BlockDiagMat<KT,VT>& EHL, const BlockDiagMat<KT,VT>& EHR, const RedOp<BlockMat<KT,VT> >& HL, const RedOp<BlockMat<KT,VT> >& HR);
-//
-//template<typename KT, typename VT>
-//void
-//ApplyHC(const BlockDiagMat<KT,VT>& in, BlockDiagMat<KT,VT>& out, const BlockDiagMat<KT,VT>& EHL, const BlockDiagMat<KT,VT>& EHR, const SparseOperator<VT>& H, const MPSBlockMat<KT,VT>& AL, const MPSBlockMat<KT,VT>& AR);
-//
-//template<typename KT, typename VT>
-//void
-//ApplyHCvec(VT* in, VT* out, const dim_vec<KT>& Cdims, uint Cm_tot, const BlockDiagMat<KT,VT>& EHL, const BlockDiagMat<KT,VT>& EHR, const SparseOperator<VT>& H, const MPSBlockMat<KT,VT>& AL, const MPSBlockMat<KT,VT>& AR);
-//
-//template<typename KT, typename VT>
-//BlockDiagMat<KT,VT>
-//GetHL(const MPSBlockMatArray<KT,VT>& AL, const RSpOp& H);
-//
-//template<typename KT, typename VT>
-//BlockDiagMat<KT,VT>
-//GetHR(const MPSBlockMatArray<KT,VT>& AR, const RSpOp& H);
-//
-//template<typename KT, typename VT, typename FT>
-//inline
-//Real
-//GradNormLeft(const MPSBlockMat<KT,VT>& AL, const BlockDiagMat<KT,VT>& C, FT&& HAfun);
-//
-//template<typename KT, typename VT, typename FT>
-//inline
-//Real
-//GradNormRight(const MPSBlockMat<KT,VT>& AR, const BlockDiagMat<KT,VT>& C, FT&& HAfun);
-//
-//template<typename KT, typename VT, typename FT>
-//inline
-//Real
-//GradNorm(const MPSBlockMat<KT,VT>& A, const BlockDiagMat<KT,VT>& C, FT&& HAfun, dirtype dir=r);
-
 int main(int argc, char** argv)
 {
     arma_rng::set_seed_random();
@@ -123,9 +84,6 @@ int main(int argc, char** argv)
     auto I2K = pmod->GetI2K(N,QN);
     auto obsvec = pmod->GetObservables(opstr);
 
-//    std::vector<VecType> expval;
-//    for (uint io = 0;io < obsvec.size();++io) expval.emplace_back(VecType(N));
-
     d = I2K.GetLocalDim();
     auto dimvec = pmod->MakeDims(dims,N,QN);
     auto H = pmod->GetLocalHam();
@@ -161,17 +119,14 @@ int main(int argc, char** argv)
     RedOp<BMat> HL = ReducedOp(H,ALvec.back(),l);
     RedOp<BMat> HR = ReducedOp(H,ARvec.front(),r);
 
-//    BDMat R = Cvec.back()*Cvec.back().t();
     BDMat R = Rvec.back();
     HAL = GetHL(ALvec,H);
-    EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,InvETol,0,BDMat(),verbose);
+    EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,InvETol,0,BDMat());
     AAL = ALvec.back()*ALvec.front();
 
-//    BDMat L = Cvec.front().t()*Cvec.front();
     BDMat L = Lvec.back();
     HAR = GetHR(ARvec,H);
-    EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,InvETol,0,BDMat(),verbose);
-//    AAR = ARvec.back()*ARvec.front();
+    EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,InvETol,0,BDMat());
 
     EHL1 = ApplyTMLeft(ALvec.front(),EHL) + ApplyOpTMLeftDiag(H,ALvec.back()*ALvec.front());
     EHR1 = ApplyTMRight(ARvec.back(),EHR) + ApplyOpTMRightDiag(H,ARvec.back()*ARvec.front());
@@ -290,7 +245,7 @@ int main(int argc, char** argv)
 //            TMDominantEig(ALvec,R,r,1e-15,CL*CL.t());
             HAL = GetHL(ALvec,H);
             AAL = ALvec.back()*ALvec.front();
-            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,max(tol/10.,InvETol),0,EHL,verbose); /// here EHL0 helps a lot!!
+            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,max(tol/10.,InvETol),0,EHL); /// here EHL0 helps a lot!!
 
             /// shift unit cell one site over, all remaining instructions are effectively for nn+1
             shift(ALvec,-1);
@@ -304,7 +259,7 @@ int main(int argc, char** argv)
 
             L = Cvec.front().t()*Cvec.front();
             HAR = GetHR(ARvec,H);
-            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/10.,InvETol),0,EHR0[PBC(nn+1)],verbose); /// here EHR0 also helps!!
+            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/10.,InvETol),0,EHR0[PBC(nn+1)]); /// here EHR0 also helps!!
 
 
 
