@@ -9,4 +9,4 @@ states
 log*
 build*
 *.cfg
-
+!example*.cfg
