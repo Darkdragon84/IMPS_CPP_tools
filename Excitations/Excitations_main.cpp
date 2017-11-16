@@ -78,15 +78,7 @@ int main(int argc, char** argv)
     IKey K(pmod->GetGroupObj(),Kvec);
     IKey QN(pmod->GetGroupObj(),QNvec);
 
-    /// create model and simulation parameter strings and output simulation info
-    std::stringstream sstr;
-    string savefolder;
 
-    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
-    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
-    sstr<<"_K";
-    sstr<<K;
-    cout<<"simulation summary: "<<sstr.str()<<"_tol"<<tol<<"_InvETol"<<InvETol<<endl;
 
     /// load IMPS state
     ILamArray Lamvec;
@@ -99,16 +91,27 @@ int main(int argc, char** argv)
     /// unit cell size
     N = ALvec.size();
 
-    /// momentum values
-    RVecType pvec = linspace(pmin, pmax, np);
-
-
     /// create I2K object and check its compliance with the loaded state
     auto I2K = pmod->GetI2K(N,QNvec);
 
     if (ALvec != I2K) throw std::runtime_error("AL not compatible with I2K from model");
     if (ARvec != I2K) throw std::runtime_error("AR not compatible with I2K from model");
 
+
+    /// momentum values
+    RVecType pvec = linspace(pmin, pmax, np);
+
+    /// create model and simulation parameter strings and output simulation info
+    std::stringstream sstr;
+    string savefolder;
+//    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
+    sstr<<pmod->GetModelString()<<"_QN";
+    sstr<<QN;
+    sstr<<"_N"<<N<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
+    if (!trans_op.empty()) sstr<<"_op"<<trans_op;
+    sstr<<"_K";
+    sstr<<K;
+    cout<<"simulation summary: "<<sstr.str()<<"_tol"<<tol<<"_InvETol"<<InvETol<<endl;
 
     CheckOrthoLRSqrt(ALvec,ARvec,Cvec);
 
