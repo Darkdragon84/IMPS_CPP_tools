@@ -91,6 +91,9 @@ int main(int argc, char** argv)
     /// unit cell size
     N = ALvec.size();
 
+    uint m0tot = 0;
+    for (const auto& it : Lamvec) m0tot = max(m0tot,it.GetNElem());
+
     /// create I2K object and check its compliance with the loaded state
     auto I2K = pmod->GetI2K(N,QNvec);
 
@@ -107,7 +110,7 @@ int main(int argc, char** argv)
 //    sstr<<fileparts(filename).name<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
     sstr<<pmod->GetModelString()<<"_QN";
     sstr<<QN;
-    sstr<<"_N"<<N<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
+    sstr<<"_N"<<N<<"_chi"<<m0tot<<"_p"<<pmin<<"_"<<pmax<<"_"<<np<<"_nb"<<nev<<"_shift"<<rel_shift;
     if (!trans_op.empty()) sstr<<"_op"<<trans_op;
     sstr<<"_K";
     sstr<<K;
