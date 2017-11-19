@@ -35,7 +35,7 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
     Col<T> r0 = b - Afun(x0);
     x = x0;
     Col<T> r(r0), w;
-//    Real bnorm = norm(b);
+    Real bnorm = norm(b);
     Real rnorm = norm(r), thresh=2e-16;
     T beta,htmp1,htmp2,phase,habs;
 
@@ -112,8 +112,8 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
         rnorm = std::abs(gamma(j+1));
 //        if(verbose) cout<<j+1<<":"<<rnorm<<endl;
         /// convergence (measure absolute |r| rather than relative |r|/|b|!)
-//        if (rnorm < tol*bnorm)
-        if (rnorm < tol)
+        if (rnorm < tol*bnorm)
+//        if (rnorm < tol)
         {
             flag = int(kdim);
             break;
@@ -134,11 +134,11 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
 
     if (flag < 0)
     {
-//        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|/|b|="<<norm(b - Afun(x))/bnorm<<", flag="<<flag<<endl;
-        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|="<<norm(b - Afun(x))<<", flag="<<flag<<endl;
+        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|/|b|="<<norm(b - Afun(x))/bnorm<<", flag="<<flag<<endl;
+//        cerr<<"gmres: no convergence after "<<kdim<<" steps, |r|="<<norm(b - Afun(x))<<", flag="<<flag<<endl;
     }
-//    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|/|b|="<<norm(b - Afun(x))/bnorm<<endl;
-    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|="<<norm(b - Afun(x))<<endl;
+    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|/|b|="<<norm(b - Afun(x))/bnorm<<endl;
+//    else if (verbose) cout<<"gmres converged after "<<flag<<" steps to |r|="<<norm(b - Afun(x))<<endl;
 
 
     return flag;
