@@ -36,8 +36,10 @@ int main(int argc, char** argv)
     Real InvETol = 5e-15;
     Real tolmin = 5e-16;
     Real tolmax = 1e-6;
-    bool verbose = true;
+    uint verbosity = 1;
+    Real InvEfac = 2.;
     bool plotnorm = false;
+    bool trueLR = true;
 
     bool savestate=false;
     std::string savefolder="data";
@@ -63,10 +65,12 @@ int main(int argc, char** argv)
     pp.GetValue(expand_thresh,"exthresh");
     pp.GetValue(lamthresh,"lamthresh");
     pp.GetValue(InvETol,"InvETol");
+    pp.GetValue(InvEfac,"InvEfac");
     pp.GetValue(expand_pause = 5,"expand_pause");
     pp.GetValue(savestate,"save");
-    pp.GetValue(verbose,"verbose");
+    pp.GetValue(verbosity,"verbosity");
     pp.GetValue(plotnorm,"plotnorm");
+    pp.GetValue(trueLR,"trueLR");
     pp.GetValue(savefolder,"folder");
 
     /// implement "periodic boundary conditions" within UC, i.e. N+1->1 and 0->N
@@ -121,12 +125,12 @@ int main(int argc, char** argv)
 
     BDMat R = Rvec.back();
     HAL = GetHL(ALvec,H);
-    EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,InvETol,0,BDMat());
+    EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,InvETol,0,BDMat(),verbosity>1);
     AAL = ALvec.back()*ALvec.front();
 
     BDMat L = Lvec.back();
     HAR = GetHR(ARvec,H);
-    EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,InvETol,0,BDMat());
+    EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,InvETol,0,BDMat(),verbosity>1);
 
     EHL1 = ApplyTMLeft(ALvec.front(),EHL) + ApplyOpTMLeftDiag(H,ALvec.back()*ALvec.front());
     EHR1 = ApplyTMRight(ARvec.back(),EHR) + ApplyOpTMRightDiag(H,ARvec.back()*ARvec.front());
@@ -242,10 +246,11 @@ int main(int argc, char** argv)
             Lamvec.back() = lamL;
 
             R = CL*CL.t();
-//            TMDominantEig(ALvec,R,r,1e-15,CL*CL.t());
+            if (trueLR) TMDominantEig(ALvec,R,r,1e-15,R);
+
             HAL = GetHL(ALvec,H);
             AAL = ALvec.back()*ALvec.front();
-            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,max(tol/10.,InvETol),0,EHL); /// here EHL0 helps a lot!!
+            EHL = InvertE_proj(ALvec,HAL,eye<Scalar>(Cvec.back().GetMr()),R,l,std::max(tol/InvEfac,InvETol),0,EHL,verbosity>1); /// here EHL0 helps a lot!!
 
             /// shift unit cell one site over, all remaining instructions are effectively for nn+1
             shift(ALvec,-1);
@@ -258,8 +263,10 @@ int main(int argc, char** argv)
             EHL1 = ApplyOpTMLeftDiag(H,AAL) + ApplyTMLeft(ALvec.front(),EHLtmp);
 
             L = Cvec.front().t()*Cvec.front();
+            if (trueLR) TMDominantEig(ARvec,L,l,1e-15,L);
+
             HAR = GetHR(ARvec,H);
-            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/10.,InvETol),0,EHR0[PBC(nn+1)]); /// here EHR0 also helps!!
+            EHR = InvertE_proj(ARvec,HAR,L,eye<Scalar>(Cvec.front().GetMl()),r,max(tol/InvEfac,InvETol),0,EHR0[PBC(nn+1)],verbosity>1); /// here EHR0 also helps!!
 
 
 
@@ -315,7 +322,7 @@ int main(int argc, char** argv)
         {
             Lvec[PBC(n-1)] = Cvec[n].t()*Cvec[n];
 
-            if (verbose)
+            if (verbosity>0)
             {
                 cout<<"Lam["<<n<<"]"<<endl;
                 Lamvec[n].ShowDimsMins();
