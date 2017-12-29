@@ -1,6 +1,7 @@
 *.[oa]
 *.bin
 *.so
+*~
 bin
 obj
 lib
