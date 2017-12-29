@@ -1,18 +1,22 @@
 #ifndef ITERATIVE_H
 #define ITERATIVE_H
 
-//#include <iostream>
-//#include <functional>
-
-//#include "arma_typedefs.h"
-
 /***********************************
  * flag values:
  * -2: beta < thresh (def. 2e-16)
  */
 
-//Real std::conj(const Real x) {return x;}
+ ///==================================================================================================================
+ /// overloaded conjugate function that can also be called on non-complex inputs, where it acts as identity.
+ /// we need this within such that the gmres function template can be called for complex and non-complex datatypes
 
+template<typename T>
+T conjugate(T x) {return std::conj(x);}
+
+template<>
+Real conjugate(Real x) {return x;}
+
+///=== actual GMRES implementation ===================================================================================
 template<typename T>
 int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Col<T>& x, const Col<T>& x0, Real tol, uint maxit, uint krylovdim=0, bool verbose=false)
 {
@@ -77,7 +81,7 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
             htmp1 = H(i,j);
             htmp2 = H(i+1,j);
             H(i,j)   =             c(i)*htmp1 + s(i)*htmp2;
-            H(i+1,j) = -std::conj(s(i))*htmp1 + c(i)*htmp2;
+            H(i+1,j) = -conjugate(s(i))*htmp1 + c(i)*htmp2;
         }
         beta = arma::norm(H(span(j,j+1),j));
 //        beta = sqrt(H(j,j)*H(j,j) + H(j+1,j)*H(j+1,j)); /// that basically means that w didn't change after subtracting the last v, i.e. w would be linearly dependent on last v.
@@ -99,13 +103,13 @@ int gmres(const std::function<Col<T> (const Col<T>&)>& Afun, const Col<T>& b, Co
             habs = std::abs(H(j,j));
             phase = H(j,j)/habs;
 
-            s(j) = phase*std::conj(H(j+1,j))/beta;
+            s(j) = phase*conjugate(H(j+1,j))/beta;
             c(j) = habs/beta;
 //            cout<<H(j+1,j)*c(j) - H(j,j)*std::conj(s(j))<<" should be zero"<<endl;
             /// we are overwriting H with R column after column. In the last iteration R is an upper triangular matrix with all zeros on the bottom
             H(j,j) = phase*beta;
             H(j+1,j) = 0;
-            gamma(j+1) = -std::conj(s(j))*gamma(j);
+            gamma(j+1) = -conjugate(s(j))*gamma(j);
             gamma(j) *= c(j); /// important to do that after setting gamma(j+1)!!
             ++kdim;
         }
