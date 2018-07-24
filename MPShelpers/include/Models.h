@@ -29,7 +29,7 @@ using std::make_shared;
 class ModelBase
 {
 public:
-    typedef enum emod {XYZ,XXZ,XXZAF,QIM,QPOTTS,FHUB,BHUB} emod;
+    typedef enum emod {XYZ,XXZ,XXZAF,QIM,QPOTTS,FHUB,BHUB,CUSTOM} emod;
 
     ModelBase(emod modtype, uint localdim):modtype_(modtype),localdim_(localdim),id_(SpId<Real>(localdim,1)) {};
     virtual ~ModelBase() {};
@@ -256,4 +256,28 @@ protected:
     SparseOperator<double> bop_,nop_;
 };
 
+/*************************************************************************************************************************************/
+/**< CUSTOM MODEL FROM FILE **********************************************************************************************************/
+/*************************************************************************************************************************************/
+class CustomModel : public ModelBase
+{
+public:
+    CustomModel() = default
+
+    void Init() {}; /// define as pure virtual function
+
+    /// GETTERS
+    std::vector<SparseOperator<double> > GetObservables(const std::vector<std::string>& opstring) const = {}; /// define as pure virtual function
+
+    void ShowParams() const {}; /// define as pure virtual function
+
+    #ifdef _USE_SYMMETRIES_
+    const symobj<int>& GetGroupObj() const {return GroupObj_;};
+    inline uint GetNSym() const {return GroupObj_.Nsym_;};
+    /// get the stride between the quantum numbers (first) and the initial offset (second)
+    std::vector<std::pair<int,int> > GetdQ(uint N, const std::vector<int>& QN) const {}; /// define as pure virtual function
+    ItoKey<1,IKey> GetI2K(uint N, const std::vector<int>& QN=std::vector<int>()) const {}; /// define as pure virtual function
+    std::vector<dim_map<IKey> > MakeDims(const std::vector<uint>& dims, uint N, const std::vector<int>& QN=std::vector<int>()) const;
+    #endif // _USE_SYMMETRIES_
+}
 #endif // MODELS_H_
